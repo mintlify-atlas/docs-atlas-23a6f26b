@@ -1,0 +1,337 @@
+---
+title: "Control Props Pattern in React"
+sidebarTitle: "Control Props"
+description: "The Control Props pattern lets parent components take full control of a child's state by providing both a value prop and a change handler callback."
+---
+
+Native HTML inputs have always supported two modes: uncontrolled (the DOM owns the value) and controlled (`value` + `onChange` handled by React). The Control Props pattern brings this same duality to custom components — a `Counter`, `Tabs`, or `Modal` can manage its own state by default, or surrender control to a parent when the parent provides a `value` and `onChange`. Callers start simple and add control only when they need it.
+
+## The Problem
+
+Components that are only uncontrolled can't be synchronised with external state:
+
+```tsx
+// ❌ Uncontrolled only — parent can't read or set the count
+function Counter() {
+  const [count, setCount] = useState(0)
+  return <button onClick={() => setCount(count + 1)}>Count: {count}</button>
+}
+```
+
+Components that are only controlled require the parent to manage boilerplate state even for the simplest usage:
+
+```tsx
+// ❌ Controlled only — parent must manage state even when it doesn't need to
+function Counter({ count, setCount }) {
+  return <button onClick={() => setCount(count + 1)}>Count: {count}</button>
+}
+```
+
+## The Solution
+
+Accept both `value` (controlled) and `defaultValue` (uncontrolled) props. When `value` is present the parent drives the state; otherwise the component drives its own:
+
+```tsx
+// ✅ Works uncontrolled
+<Counter defaultValue={0} />
+
+// ✅ Works controlled
+<Counter value={count} onChange={setCount} />
+
+// ✅ Uncontrolled with a notification callback
+<Counter defaultValue={0} onChange={(v) => console.log(v)} />
+```
+
+## Counter: Controlled and Uncontrolled
+
+```tsx
+// components/Counter.tsx
+import { useState } from 'react'
+
+interface CounterProps {
+  value?: number
+  defaultValue?: number
+  onChange?: (value: number) => void
+  min?: number
+  max?: number
+}
+
+export function Counter({
+  value: controlledValue,
+  defaultValue = 0,
+  onChange,
+  min = -Infinity,
+  max = Infinity,
+}: CounterProps) {
+  // Internal state is used only in uncontrolled mode
+  const [internalValue, setInternalValue] = useState(defaultValue)
+
+  const isControlled = controlledValue !== undefined
+  const value = isControlled ? controlledValue : internalValue
+
+  const handleChange = (newValue: number) => {
+    const clamped = Math.max(min, Math.min(max, newValue))
+    if (!isControlled) setInternalValue(clamped)
+    onChange?.(clamped)
+  }
+
+  return (
+    <div className="flex items-center gap-4 p-4 bg-white shadow rounded-lg">
+      <button
+        onClick={() => handleChange(value - 1)}
+        disabled={value <= min}
+        className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        -
+      </button>
+
+      <span className="text-2xl font-bold min-w-[3ch] text-center">{value}</span>
+
+      <button
+        onClick={() => handleChange(value + 1)}
+        disabled={value >= max}
+        className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        +
+      </button>
+
+      <button
+        onClick={() => handleChange(defaultValue)}
+        className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
+      >
+        Reset
+      </button>
+    </div>
+  )
+}
+```
+
+Using `Counter` in all three modes:
+
+```tsx
+import { useState } from 'react'
+import { Counter } from './components/Counter'
+
+export function App() {
+  const [count, setCount] = useState(0)
+
+  return (
+    <div className="p-8 space-y-6">
+      <div>
+        <h2 className="text-xl font-bold mb-2">Uncontrolled</h2>
+        <p className="text-gray-600 mb-4">Component manages its own state</p>
+        <Counter defaultValue={0} min={0} max={10} />
+      </div>
+
+      <div>
+        <h2 className="text-xl font-bold mb-2">Controlled</h2>
+        <p className="text-gray-600 mb-4">Parent value: {count}</p>
+        <Counter value={count} onChange={setCount} min={0} max={10} />
+      </div>
+
+      <div>
+        <h2 className="text-xl font-bold mb-2">Hybrid</h2>
+        <p className="text-gray-600 mb-4">Uncontrolled with change notification</p>
+        <Counter defaultValue={5} onChange={(v) => console.log('Changed:', v)} />
+      </div>
+    </div>
+  )
+}
+```
+
+## Advanced Example: Controlled Tabs
+
+The same pattern applied to a Tabs component — `value` + `onChange` for controlled mode, `defaultValue` for uncontrolled:
+
+```tsx
+// components/Tabs.tsx
+import { useState, ReactNode, createContext, useContext } from 'react'
+
+interface TabsContextType {
+  activeTab: string
+  setActiveTab: (id: string) => void
+}
+
+const TabsContext = createContext<TabsContextType | null>(null)
+
+function useTabsContext() {
+  const context = useContext(TabsContext)
+  if (!context) throw new Error('Tabs components must be used within <Tabs>')
+  return context
+}
+
+interface TabsProps {
+  children: ReactNode
+  value?: string
+  defaultValue?: string
+  onChange?: (value: string) => void
+}
+
+export function Tabs({ children, value: controlledValue, defaultValue, onChange }: TabsProps) {
+  const [internalValue, setInternalValue] = useState(defaultValue || '')
+
+  const isControlled = controlledValue !== undefined
+  const activeTab = isControlled ? controlledValue : internalValue
+
+  const handleChange = (newValue: string) => {
+    if (!isControlled) setInternalValue(newValue)
+    onChange?.(newValue)
+  }
+
+  return (
+    <TabsContext.Provider value={{ activeTab, setActiveTab: handleChange }}>
+      <div className="w-full">{children}</div>
+    </TabsContext.Provider>
+  )
+}
+
+function TabList({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <div className={`flex border-b border-gray-200 ${className}`}>{children}</div>
+}
+
+function Tab({ children, value, disabled = false }: { children: ReactNode; value: string; disabled?: boolean }) {
+  const { activeTab, setActiveTab } = useTabsContext()
+  const isActive = activeTab === value
+
+  return (
+    <button
+      onClick={() => !disabled && setActiveTab(value)}
+      disabled={disabled}
+      className={`px-4 py-2 font-medium transition-colors
+        ${isActive ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600 hover:text-gray-900'}
+        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+    >
+      {children}
+    </button>
+  )
+}
+
+function TabPanels({ children }: { children: ReactNode }) {
+  return <div className="mt-4">{children}</div>
+}
+
+function TabPanel({ children, value }: { children: ReactNode; value: string }) {
+  const { activeTab } = useTabsContext()
+  if (activeTab !== value) return null
+  return <div>{children}</div>
+}
+
+Tabs.List = TabList
+Tabs.Tab = Tab
+Tabs.Panels = TabPanels
+Tabs.Panel = TabPanel
+```
+
+Controlled tabs with external navigation buttons:
+
+```tsx
+import { useState } from 'react'
+import { Tabs } from './components/Tabs'
+
+export function Dashboard() {
+  const [activeTab, setActiveTab] = useState('overview')
+
+  return (
+    <div className="p-6 space-y-8">
+      <Tabs value={activeTab} onChange={setActiveTab}>
+        <Tabs.List>
+          <Tabs.Tab value="overview">Overview</Tabs.Tab>
+          <Tabs.Tab value="analytics">Analytics</Tabs.Tab>
+          <Tabs.Tab value="reports">Reports</Tabs.Tab>
+        </Tabs.List>
+
+        <Tabs.Panels>
+          <Tabs.Panel value="overview">
+            <div className="p-4 bg-gray-50 rounded">Overview content</div>
+          </Tabs.Panel>
+          <Tabs.Panel value="analytics">
+            <div className="p-4 bg-gray-50 rounded">Analytics content</div>
+          </Tabs.Panel>
+          <Tabs.Panel value="reports">
+            <div className="p-4 bg-gray-50 rounded">Reports content</div>
+          </Tabs.Panel>
+        </Tabs.Panels>
+      </Tabs>
+
+      {/* Parent can drive tab selection from outside the component */}
+      <div className="flex gap-2">
+        <button onClick={() => setActiveTab('overview')} className="px-4 py-2 bg-blue-500 text-white rounded">
+          Go to Overview
+        </button>
+        <button onClick={() => setActiveTab('analytics')} className="px-4 py-2 bg-blue-500 text-white rounded">
+          Go to Analytics
+        </button>
+      </div>
+    </div>
+  )
+}
+```
+
+## Extracting the Logic into a Hook
+
+The controlled/uncontrolled switching logic is always the same. Extract it into a reusable hook:
+
+```tsx
+function useControllableState<T>(
+  controlledValue: T | undefined,
+  defaultValue: T,
+  onChange?: (value: T) => void
+) {
+  const [internalValue, setInternalValue] = useState(defaultValue)
+  const isControlled = controlledValue !== undefined
+  const value = isControlled ? controlledValue : internalValue
+
+  const setValue = (newValue: T) => {
+    if (!isControlled) setInternalValue(newValue)
+    onChange?.(newValue)
+  }
+
+  return [value, setValue] as const
+}
+
+// Usage in any component
+function Counter({ value, defaultValue = 0, onChange }: CounterProps) {
+  const [count, setCount] = useControllableState(value, defaultValue, onChange)
+  return <button onClick={() => setCount(count + 1)}>Count: {count}</button>
+}
+```
+
+## When to Use
+
+- Building form components (inputs, selects, checkboxes, radio groups).
+- Creating components that need a sensible default behaviour but may need external synchronisation.
+- Providing a component library where callers have varying levels of complexity.
+- Synchronising component state with a URL parameter, localStorage, or a global store.
+- Sharing state between sibling components (both controlled by a common parent).
+
+## When Not to Use
+
+- The component will never need external control — the extra props are noise.
+- State is always managed externally — skip the uncontrolled mode entirely.
+- The added complexity of maintaining both modes doesn't justify the flexibility.
+
+## Best Practices
+
+1. **Follow naming conventions** — use `value`/`onChange` for controlled mode, `defaultValue` for the uncontrolled initial value.
+2. **Don't switch modes mid-lifecycle** — a component should be either controlled or uncontrolled for its entire lifetime.
+3. **Warn in development** — log a helpful warning if `value` is provided without `onChange`:
+
+```tsx
+useEffect(() => {
+  if (process.env.NODE_ENV === 'development') {
+    if (controlledValue !== undefined && !onChange) {
+      console.warn(
+        `MyComponent: You provided a \`value\` prop without an \`onChange\` handler. ` +
+        `This will render a read-only component. Provide \`onChange\` or use \`defaultValue\`.`
+      )
+    }
+  }
+}, [controlledValue, onChange])
+```
+
+4. **Provide sensible defaults** — uncontrolled mode should work immediately without any required props.
+5. **Document both modes** — examples for both controlled and uncontrolled usage are important for adoption.
+
+<Note>
+  Libraries such as React Hook Form, Radix UI, Headless UI, and Downshift implement the Control Props pattern extensively. Their source code is a great reference for seeing how the pattern handles edge cases at scale.
+</Note>

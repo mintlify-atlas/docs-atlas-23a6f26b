@@ -1,0 +1,243 @@
+---
+title: "Dropzone: File Upload with Drag and Drop"
+sidebarTitle: "Dropzone"
+description: "A file upload dropzone component built on react-dropzone and shadcn/ui, supporting drag-and-drop and click-to-browse file selection."
+---
+
+`Dropzone` is a compound file-upload component built on top of `react-dropzone` and shadcn/ui's `Button` primitive. It provides a flexible, accessible drag-and-drop area with built-in upload state tracking, per-file error messages, retry logic, and an animated progress indicator. The compound API separates concerns into small, composable sub-components — `DropZoneArea`, `DropzoneTrigger`, `DropzoneFileList`, and more — so you can assemble exactly the upload UI your application needs without being locked into a fixed layout.
+
+## Installation
+
+<Steps>
+  <Step title="Install via CLI">
+    Run the shadcn CLI `add` command to copy the component into your project:
+
+    ```bash
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/dropzone
+    ```
+  </Step>
+  <Step title="Install manually — dependencies">
+    If you prefer to install by hand, start with the required npm package:
+
+    ```bash
+    npm install react-dropzone
+    ```
+  </Step>
+  <Step title="Install manually — shadcn components">
+    Add the shadcn/ui primitives the component relies on:
+
+    ```bash
+    npx shadcn@latest add button
+    ```
+  </Step>
+  <Step title="Update import paths">
+    After copying the source, adjust any `@/` aliases to match your project's path configuration.
+  </Step>
+</Steps>
+
+## Usage
+
+The component is driven by the `useDropzone` hook, which manages file state and upload logic. Pass the hook's return value as props to the `<Dropzone>` context provider, then compose the sub-components inside it.
+
+```tsx
+import {
+  Dropzone,
+  DropZoneArea,
+  DropzoneDescription,
+  DropzoneTrigger,
+  DropzoneFileList,
+  DropzoneFileListItem,
+  DropzoneFileMessage,
+  DropzoneMessage,
+  DropzoneRemoveFile,
+  InfiniteProgress,
+  useDropzone,
+} from "@/components/ui/dropzone"
+import { Trash2Icon } from "lucide-react"
+
+export default function FileUpload() {
+  const dropzone = useDropzone({
+    onDropFile: async (file) => {
+      // Simulate an upload — replace with your real upload logic
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      return { status: "success", result: file.name }
+    },
+    validation: {
+      accept: { "image/*": [".png", ".jpg", ".jpeg", ".webp"] },
+      maxSize: 5 * 1024 * 1024, // 5 MB
+      maxFiles: 4,
+    },
+  })
+
+  return (
+    <Dropzone {...dropzone}>
+      <DropZoneArea className="min-h-32 flex-col gap-2">
+        <DropzoneDescription>
+          PNG, JPG, or WebP up to 5 MB — max 4 files
+        </DropzoneDescription>
+        <DropzoneTrigger>Browse files</DropzoneTrigger>
+        <DropzoneMessage />
+      </DropZoneArea>
+
+      <DropzoneFileList className="mt-4">
+        {dropzone.fileStatuses.map((file) => (
+          <DropzoneFileListItem key={file.id} file={file}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm truncate">{file.fileName}</span>
+              <DropzoneRemoveFile variant="ghost">
+                <Trash2Icon className="h-4 w-4" />
+              </DropzoneRemoveFile>
+            </div>
+            <InfiniteProgress status={file.status} />
+            <DropzoneFileMessage />
+          </DropzoneFileListItem>
+        ))}
+      </DropzoneFileList>
+    </Dropzone>
+  )
+}
+```
+
+## `useDropzone` hook
+
+The `useDropzone` hook is the heart of the component. It wraps `react-dropzone` and adds upload lifecycle management.
+
+### Props
+
+<ParamField body="onDropFile" type="(file: File) => Promise<{ status: 'success'; result: TUploadRes } | { status: 'error'; error: TUploadError }>">
+  **Required.** Called once for each accepted file. Return `{ status: 'success', result }` on success or `{ status: 'error', error }` on failure. The hook uses the returned value to update the file's status in `fileStatuses`.
+</ParamField>
+
+<ParamField body="validation.accept" type="Accept">
+  MIME type map restricting which file types are accepted. Uses the same format as the `react-dropzone` `accept` option — e.g. `{ 'image/*': ['.png', '.jpg'] }`.
+</ParamField>
+
+<ParamField body="validation.maxSize" type="number">
+  Maximum file size in bytes. Files exceeding this limit are rejected and a human-readable error message is shown automatically.
+</ParamField>
+
+<ParamField body="validation.minSize" type="number">
+  Minimum file size in bytes.
+</ParamField>
+
+<ParamField body="validation.maxFiles" type="number">
+  Maximum total number of files allowed. Defaults to unlimited.
+</ParamField>
+
+<ParamField body="shiftOnMaxFiles" type="boolean" default="false">
+  When `true` and the user drops files that would exceed `maxFiles`, the oldest files are automatically removed to make room. When `false` (default), excess files are rejected and an error is displayed.
+</ParamField>
+
+<ParamField body="maxRetryCount" type="number">
+  Maximum number of times a failed upload can be retried via `DropzoneRetryFile`. Defaults to unlimited.
+</ParamField>
+
+<ParamField body="autoRetry" type="boolean" default="false">
+  When `true`, failed uploads are retried automatically (up to `maxRetryCount` times) without user interaction.
+</ParamField>
+
+<ParamField body="shapeUploadError" type="(error: TUploadError) => string | void">
+  Required when `TUploadError` is not a `string`. Converts your error type to a display string shown by `DropzoneFileMessage`.
+</ParamField>
+
+<ParamField body="onRemoveFile" type="(id: string) => void | Promise<void>">
+  Optional callback invoked when a file is removed from the list — useful for cleaning up server-side state.
+</ParamField>
+
+<ParamField body="onFileUploaded" type="(result: TUploadRes) => void">
+  Called each time an individual file finishes uploading successfully.
+</ParamField>
+
+<ParamField body="onFileUploadError" type="(error: TUploadError) => void">
+  Called each time an individual file upload fails.
+</ParamField>
+
+<ParamField body="onAllUploaded" type="() => void">
+  Called once after all files in a single drop batch have finished processing (success or error).
+</ParamField>
+
+<ParamField body="onRootError" type="(error: string | undefined) => void">
+  Called when the root validation error changes — e.g. when a user drops too many files or an invalid file type.
+</ParamField>
+
+## Sub-components
+
+### `<Dropzone>`
+
+Context provider that makes the `useDropzone` return value available to all child sub-components. Spread the hook result directly onto it:
+
+```tsx
+const dropzone = useDropzone({ ... })
+<Dropzone {...dropzone}>{/* children */}</Dropzone>
+```
+
+### `<DropZoneArea>`
+
+The drag-and-drop target region. Highlights with a pulse animation while a drag is active and applies a destructive border when there is a validation error. Accepts any `div` HTML attributes plus `className`.
+
+### `<DropzoneTrigger>`
+
+A styled `<label>` element that wraps the hidden file `<input>`. Clicking it opens the native file browser. Place any text or icon as its children.
+
+### `<DropzoneDescription>`
+
+A `<p>` element pre-styled as `text-sm text-muted-foreground`. Use it to communicate accepted types or size limits to the user.
+
+### `<DropzoneMessage>`
+
+Displays the current root validation error (e.g. "Only image/png are allowed", "Max 4 files") as a destructive-coloured `<p>`. Renders nothing when there is no error.
+
+### `<DropzoneFileList>`
+
+An accessible `<ol>` container for the list of file items. Apply spacing via `className`.
+
+### `<DropzoneFileListItem>`
+
+Wraps a single `FileStatus` entry and provides per-file context to `DropzoneFileMessage`, `DropzoneRemoveFile`, and `DropzoneRetryFile`. Requires the `file` prop:
+
+```tsx
+<DropzoneFileListItem file={fileStatus}>
+  {/* file-specific sub-components */}
+</DropzoneFileListItem>
+```
+
+### `<DropzoneFileMessage>`
+
+Shows the upload error message for the enclosing file item. When the file status is not `"error"` it renders its children instead, allowing a custom success message.
+
+### `<DropzoneRemoveFile>`
+
+A `Button` (icon size by default) that calls `onRemoveFile` for the enclosing file item when clicked. Forwards all `ButtonProps`.
+
+### `<DropzoneRetryFile>`
+
+A `Button` that calls `onRetry` for the enclosing file item. Automatically disabled (via `aria-disabled`) when the file cannot be retried (e.g. `maxRetryCount` reached). Forwards all `ButtonProps`.
+
+### `<InfiniteProgress>`
+
+An animated progress bar that displays an indeterminate pulse while a file is `"pending"`, fills solid green on `"success"`, and turns destructive red on `"error"`.
+
+```tsx
+<InfiniteProgress status={file.status} />
+```
+
+## `FileStatus` type
+
+`fileStatuses` from the hook is an array of `FileStatus<TUploadRes, TUploadError>` objects:
+
+```ts
+type FileStatus<TUploadRes, TUploadError> = {
+  id: string        // unique identifier (crypto.randomUUID)
+  fileName: string  // original file name
+  file: File        // the raw File object
+  tries: number     // upload attempt count
+} & (
+  | { status: "pending"; result?: undefined; error?: undefined }
+  | { status: "success"; result: TUploadRes; error?: undefined }
+  | { status: "error"; error: TUploadError; result?: undefined }
+)
+```
+
+<Note>
+  `Dropzone` is fully generic — `useDropzone<TUploadRes, TUploadError>()` lets you type the upload result and error shapes to match your API exactly.
+</Note>

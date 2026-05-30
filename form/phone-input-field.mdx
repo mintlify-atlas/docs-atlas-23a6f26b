@@ -1,0 +1,82 @@
+---
+title: "PhoneInputField: International Phone Number Field"
+sidebarTitle: "PhoneInputField"
+description: "PhoneInputField integrates the PhoneInput UI component with ShaddyForm, enabling country-code selection and E.164 phone number validation in forms."
+---
+
+`PhoneInputField` wraps the `PhoneInput` UI component inside ShaddyForm's form context, providing a ready-to-use international phone number input. It renders a country-code selector alongside a formatted number input, calls `field.onChange` with the full E.164-formatted phone string, and shows validation errors automatically via `<FormMessage>`.
+
+## Installation
+
+Install all ShaddyForm fields at once with the `shaddy-form` registry item:
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+```
+
+## Usage
+
+```tsx
+"use client"
+import { z } from "zod"
+import { ShaddyForm } from "@/components/form/shaddy-form"
+import { PhoneInputField } from "@/components/form/fields/phone-input-field"
+import { SubmitButton } from "@/components/form/fields/submit-button"
+
+const schema = z.object({
+  phone: z
+    .string()
+    .min(7, { message: "Please enter a valid phone number" }),
+})
+
+type FormValues = z.infer<typeof schema>
+
+const initialValues: FormValues = { phone: "" }
+
+export default function Example() {
+  return (
+    <ShaddyForm
+      schema={schema}
+      initialValues={initialValues}
+      onSubmit={(data) => console.log(data)}
+    >
+      <div className="space-y-4 w-80">
+        <PhoneInputField<FormValues>
+          name="phone"
+          label="Phone Number"
+          required
+        />
+        <SubmitButton label="Continue" />
+      </div>
+    </ShaddyForm>
+  )
+}
+```
+
+## Props
+
+<ParamField path="name" type="Path<T>" required>
+  The field name. Must match a key in your Zod schema passed to `ShaddyForm`.
+</ParamField>
+
+<ParamField path="label" type="string">
+  Label text rendered above the phone input. Omit to hide the label.
+</ParamField>
+
+<ParamField path="required" type="boolean" default="false">
+  When `true`, appends a red asterisk to the label as a visual indicator.
+</ParamField>
+
+<ParamField path="disabled" type="boolean" default="false">
+  Disables the underlying `PhoneInput` component when `true`.
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes applied to the outermost `FormItem` wrapper.
+</ParamField>
+
+## Notes
+
+- The value stored in the form state is the full phone string produced by the `PhoneInput` component (typically E.164 format, e.g. `+14155552671`).
+- Phone number format validation should be handled in your Zod schema — for example using a regex or a library such as `libphonenumber-js`.
+- `PhoneInputField` must be rendered inside a `<ShaddyForm>` — it reads `control` from `useFormContext` internally.

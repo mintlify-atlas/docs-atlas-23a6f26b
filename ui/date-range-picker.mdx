@@ -1,0 +1,140 @@
+---
+title: "DateRangePicker: Select Date Ranges in React"
+sidebarTitle: "DateRangePicker"
+description: "A date range picker component for React built on react-day-picker and shadcn/ui, supporting single and range selection with a popover calendar."
+---
+
+`DateRangePicker` is an enhanced calendar component built on top of the shadcn/ui `Calendar`, `Popover`, and `Button` primitives. It renders a trigger button that opens a popover containing a two-month calendar view alongside a list of built-in preset ranges — such as Today, Last 7 Days, This Month, and more. Users can pick a preset for instant selection or click individual days for a fully custom date range. An inline clear button lets them reset their selection without re-opening the picker.
+
+## Installation
+
+<Steps>
+  <Step title="Install via CLI">
+    Run the shadcn CLI `add` command to copy the component into your project:
+
+    ```bash
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/date-range-picker
+    ```
+  </Step>
+  <Step title="Install manually — dependencies">
+    If you prefer to install by hand, start with the required npm packages:
+
+    ```bash
+    npm install date-fns react-day-picker @radix-ui/react-icons lucide-react
+    ```
+  </Step>
+  <Step title="Install manually — shadcn components">
+    Add the shadcn/ui primitives the component relies on:
+
+    ```bash
+    npx shadcn@latest add popover button calendar
+    ```
+  </Step>
+  <Step title="Update import paths">
+    After copying the source, adjust any `@/` aliases to match your project's path configuration.
+  </Step>
+</Steps>
+
+## Usage
+
+```tsx
+import * as React from "react"
+import DateRangePicker from "@/components/ui/date-range-picker"
+import type { DateRange } from "react-day-picker"
+
+export default function MyPage() {
+  const [range, setRange] = React.useState<DateRange | undefined>()
+
+  return (
+    <DateRangePicker
+      dateRange={range}
+      onChange={setRange}
+      placeholder="Select date range"
+      triggerVariant="outline-solid"
+      triggerSize="default"
+      showInternalPresets={true}
+    />
+  )
+}
+```
+
+### Without presets
+
+Pass `showInternalPresets={false}` to display only the calendar, hiding the preset sidebar:
+
+```tsx
+<DateRangePicker
+  dateRange={range}
+  onChange={setRange}
+  showInternalPresets={false}
+/>
+```
+
+### Pre-populated with a day count
+
+Use the `dayCount` prop to initialize the picker with a rolling window ending today — useful for dashboards that open with a default "last N days" selection:
+
+```tsx
+<DateRangePicker
+  dayCount={7}
+  onChange={setRange}
+/>
+```
+
+## Props
+
+<ParamField body="dateRange" type="{ from?: Date; to?: Date }" default="undefined">
+  The currently selected date range. Pass `from` and/or `to` dates to control the component externally. When both are defined the trigger button displays the formatted range.
+</ParamField>
+
+<ParamField body="dayCount" type="number" default="undefined">
+  Number of days to use for the default range, counting back from today. For example, `dayCount={7}` initialises the picker to the last 7 days. Ignored when `dateRange` is provided.
+</ParamField>
+
+<ParamField body="placeholder" type="string" default='"Pick a date"'>
+  Placeholder text rendered inside the trigger button when no date range is selected.
+</ParamField>
+
+<ParamField body="triggerVariant" type='"default" | "outline-solid" | "secondary" | "ghost"' default='"outline-solid"'>
+  Visual style variant of the trigger button. Maps to the shadcn/ui `Button` `variant` prop (excluding `"destructive"` and `"link"`).
+</ParamField>
+
+<ParamField body="triggerSize" type='"default" | "sm" | "lg"' default='"default"'>
+  Size of the trigger button. Maps to the shadcn/ui `Button` `size` prop (excluding `"icon"`).
+</ParamField>
+
+<ParamField body="triggerClassName" type="string" default="undefined">
+  Additional CSS class names applied to the trigger button element.
+</ParamField>
+
+<ParamField body="onChange" type="(date: { from?: Date; to?: Date }) => void" default="undefined">
+  Callback invoked when the user confirms a date range. Called on preset click (immediately) or when the user presses the **OK** button after making a calendar selection.
+</ParamField>
+
+<ParamField body="showInternalPresets" type="boolean" default="true">
+  When `true`, a sidebar of built-in preset ranges is displayed alongside the calendar. Set to `false` to show only the calendar.
+</ParamField>
+
+<Note>
+  `DateRangePicker` also forwards all props accepted by shadcn/ui's `PopoverContent` (except `onChange`), so you can control alignment, side offset, collision padding, and more.
+</Note>
+
+## Built-in preset ranges
+
+The following presets are available by default when `showInternalPresets` is `true`:
+
+| Preset | Range |
+|---|---|
+| Today | Current day |
+| Yesterday | Previous day |
+| This Week | Monday → Sunday of current week |
+| Last Week | Monday → Sunday of previous week |
+| Last 7 Days | 6 days ago → today |
+| This Month | First → last day of current month |
+| Last Month | First → last day of previous month |
+| This Year | Jan 1 → Dec 31 of current year |
+| Last Year | Jan 1 → Dec 31 of previous year |
+
+<Tip>
+  Clicking a preset immediately closes the popover and triggers the `onChange` callback — no OK button press required.
+</Tip>

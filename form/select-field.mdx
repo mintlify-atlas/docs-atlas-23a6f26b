@@ -1,0 +1,93 @@
+---
+title: "SelectField: Dropdown Select for ShaddyForm"
+sidebarTitle: "SelectField"
+description: "SelectField renders a shadcn/ui Select dropdown integrated with ShaddyForm, supporting labeled options with automatic validation and error messages."
+---
+
+`SelectField` is a reusable dropdown component that wires shadcn/ui's `Select` primitives into ShaddyForm's form context. Pass an array of `{ value, text }` option objects, and the component handles rendering `SelectItem` elements, syncing the selected value with `react-hook-form`, and displaying validation errors automatically.
+
+## Installation
+
+Install all ShaddyForm fields at once with the `shaddy-form` registry item:
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+```
+
+## Usage
+
+```tsx
+"use client"
+import { z } from "zod"
+import { ShaddyForm } from "@/components/form/shaddy-form"
+import { SelectField } from "@/components/form/fields/select-field"
+import { SubmitButton } from "@/components/form/fields/submit-button"
+
+const ROLE_OPTIONS = [
+  { value: "admin", text: "Admin" },
+  { value: "editor", text: "Editor" },
+  { value: "viewer", text: "Viewer" },
+]
+
+const schema = z.object({
+  role: z.string().min(1, { message: "Role is required" }),
+})
+
+type FormValues = z.infer<typeof schema>
+
+const initialValues: FormValues = { role: "" }
+
+export default function Example() {
+  return (
+    <ShaddyForm
+      schema={schema}
+      initialValues={initialValues}
+      onSubmit={(data) => console.log(data)}
+    >
+      <div className="space-y-4 w-72">
+        <SelectField<FormValues>
+          name="role"
+          label="User Role"
+          placeholder="Select a role"
+          options={ROLE_OPTIONS}
+          required
+        />
+        <SubmitButton label="Submit" />
+      </div>
+    </ShaddyForm>
+  )
+}
+```
+
+## Props
+
+<ParamField path="name" type="Path<T>" required>
+  The field name. Must match a key in your Zod schema passed to `ShaddyForm`.
+</ParamField>
+
+<ParamField path="options" type="{ value: string; text: string }[]" required>
+  Array of option objects. `value` is stored in the form state and passed to your schema; `text` is what the user sees in the dropdown list and in the trigger when an option is selected.
+</ParamField>
+
+<ParamField path="label" type="string">
+  Label text rendered above the select trigger. Omit to hide the label.
+</ParamField>
+
+<ParamField path="placeholder" type="string" default="'Select an item'">
+  Placeholder shown inside the `SelectTrigger` when no value is selected.
+</ParamField>
+
+<ParamField path="required" type="boolean" default="false">
+  When `true`, appends a red asterisk to the label as a visual indicator.
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes applied to the outermost `FormItem` wrapper.
+</ParamField>
+
+## Notes
+
+- `SelectField` must be rendered inside a `<ShaddyForm>` — it reads `control` from `useFormContext` internally.
+- Only string values are supported out of the box. If you need numeric or boolean values, convert them in your `onSubmit` handler or use a Zod transform.
+- The `options` array is rendered in the order it is provided.
+- Validation errors are rendered automatically below the select via shadcn/ui's `<FormMessage>`.

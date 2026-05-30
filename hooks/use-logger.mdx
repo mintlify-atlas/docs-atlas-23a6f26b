@@ -1,0 +1,269 @@
+---
+title: "useLogger: Advanced Logging Hook for React"
+sidebarTitle: "useLogger"
+description: "A configurable React logging hook with log levels, colour-coded browser output, timestamps, grouping, time measurement, and a devOnly mode for production safety."
+---
+
+`useLogger` is a fully-featured logging hook for React components. It replaces scattered `console.log` calls with a structured logger that respects minimum log levels, adds timestamps and prefixes, renders colour-coded output in the browser console, and automatically suppresses logs in production when `devOnly` is enabled. The hook also provides advanced utilities like `table`, `group`, `time`/`timeEnd`, `assert`, and `trace` — a complete developer-console toolkit available inside any component. <Badge>New</Badge>
+
+## Installation
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/use-logger
+```
+
+## Signature
+
+```typescript
+export enum LogLevel {
+  DEBUG = 0,
+  INFO  = 1,
+  WARN  = 2,
+  ERROR = 3,
+  NONE  = 4,
+}
+
+export interface LoggerConfig {
+  level?:                    LogLevel
+  enabled?:                  boolean
+  showTimestamp?:            boolean
+  timestampFormat?:          'iso' | 'locale' | 'time' | 'custom'
+  customTimestampFormatter?: () => string
+  prefix?:                   string
+  colored?:                  boolean
+  showStackTrace?:           boolean
+  customHandler?:            <T = unknown>(level: string, message: string, data?: T[]) => void
+  devOnly?:                  boolean
+  groupName?:                string
+}
+
+export const useLogger: (config?: LoggerConfig) => {
+  debug:   <T = unknown>(message: string, ...optionalParams: T[]) => void
+  info:    <T = unknown>(message: string, ...optionalParams: T[]) => void
+  warn:    <T = unknown>(message: string, ...optionalParams: T[]) => void
+  error:   <T = unknown>(message: string, ...optionalParams: T[]) => void
+  success: <T = unknown>(message: string, ...optionalParams: T[]) => void
+  table:   (data: unknown, columns?: string[]) => void
+  group:   (label: string, callback: () => void, collapsed?: boolean) => void
+  time:    (label: string) => void
+  timeEnd: (label: string) => void
+  assert:  <T = unknown>(condition: boolean, message: string, ...optionalParams: T[]) => void
+  trace:   <T = unknown>(message: string, ...optionalParams: T[]) => void
+  clear:   () => void
+  config:  LoggerConfig
+}
+```
+
+## Parameters
+
+<ParamField path="config" type="LoggerConfig">
+  Optional configuration object. All properties are optional; omitting the argument entirely uses safe defaults (debug level, timestamps on, colours on, devOnly off).
+
+  <Expandable title="LoggerConfig">
+    <ParamField path="level" type="LogLevel">
+      The minimum severity that will be output. Messages below this level are silently dropped. Defaults to `LogLevel.DEBUG`.
+    </ParamField>
+    <ParamField path="enabled" type="boolean">
+      Master switch to disable all logging. Defaults to `true`.
+    </ParamField>
+    <ParamField path="showTimestamp" type="boolean">
+      Prepend a timestamp to every log message. Defaults to `true`.
+    </ParamField>
+    <ParamField path="timestampFormat" type="'iso' | 'locale' | 'time' | 'custom'">
+      The format of the timestamp. `'iso'` uses `toISOString()`, `'locale'` uses `toLocaleString()`, `'time'` uses `toLocaleTimeString()`, and `'custom'` delegates to `customTimestampFormatter`. Defaults to `'iso'`.
+    </ParamField>
+    <ParamField path="customTimestampFormatter" type="() => string">
+      A function that returns a custom timestamp string. Only used when `timestampFormat` is `'custom'`.
+    </ParamField>
+    <ParamField path="prefix" type="string">
+      A label prepended to every message in square brackets (e.g. `[MyApp]`). Useful for distinguishing output from different components or modules.
+    </ParamField>
+    <ParamField path="colored" type="boolean">
+      Render log messages with colour in the browser console using `%c` formatting. Colours are applied per level: indigo for debug, blue for info, amber for warn, red for error, green for success. Defaults to `true`.
+    </ParamField>
+    <ParamField path="showStackTrace" type="boolean">
+      When `true`, appends the stack trace to `error`-level messages when the first `optionalParam` is an `Error` instance. Defaults to `true`.
+    </ParamField>
+    <ParamField path="customHandler" type="(level, message, data?) => void">
+      Replace the default `console.*` output with your own handler — useful for routing logs to a remote service, Datadog, Sentry, etc.
+    </ParamField>
+    <ParamField path="devOnly" type="boolean">
+      When `true`, all logging is suppressed when `process.env.NODE_ENV === 'production'`. Defaults to `false`.
+    </ParamField>
+    <ParamField path="groupName" type="string">
+      When set, every log call is wrapped in a `console.group` / `console.groupEnd` block with this label, visually grouping related messages in the console.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Return Value
+
+<ResponseField name="debug" type="(message, ...data?) => void">
+  Logs at `LogLevel.DEBUG`. Rendered in indigo in the browser when `colored` is `true`.
+</ResponseField>
+
+<ResponseField name="info" type="(message, ...data?) => void">
+  Logs at `LogLevel.INFO`. Rendered in blue when `colored` is `true`.
+</ResponseField>
+
+<ResponseField name="warn" type="(message, ...data?) => void">
+  Logs at `LogLevel.WARN` using `console.warn`. Always rendered in the browser's native warning style.
+</ResponseField>
+
+<ResponseField name="error" type="(message, ...data?) => void">
+  Logs at `LogLevel.ERROR` using `console.error`. Appends the stack trace when `showStackTrace` is `true` and the first extra param is an `Error`.
+</ResponseField>
+
+<ResponseField name="success" type="(message, ...data?) => void">
+  Logs at `LogLevel.INFO` using green colour. Useful for confirming successful operations without cluttering error/warn channels.
+</ResponseField>
+
+<ResponseField name="table" type="(data, columns?) => void">
+  Renders structured data using `console.table` (browser only). Falls back to `console.log` in server environments.
+</ResponseField>
+
+<ResponseField name="group" type="(label, callback, collapsed?) => void">
+  Wraps `callback` output in a `console.group` / `console.groupCollapsed` block. Pass `collapsed = true` to start the group folded.
+</ResponseField>
+
+<ResponseField name="time" type="(label) => void">
+  Starts a `console.time` timer with the given label.
+</ResponseField>
+
+<ResponseField name="timeEnd" type="(label) => void">
+  Stops and prints the elapsed time for the timer started with the same label.
+</ResponseField>
+
+<ResponseField name="assert" type="(condition, message, ...data?) => void">
+  Calls `console.assert`. The message is only printed when `condition` is `false`.
+</ResponseField>
+
+<ResponseField name="trace" type="(message, ...data?) => void">
+  Logs a message with a stack trace using `console.trace`.
+</ResponseField>
+
+<ResponseField name="clear" type="() => void">
+  Clears the console. Respects the `enabled` setting.
+</ResponseField>
+
+<ResponseField name="config" type="LoggerConfig">
+  The merged configuration object actually in use (defaults merged with your overrides). Useful for debugging logger setup.
+</ResponseField>
+
+## Usage
+
+### Basic Component Logging
+
+```tsx
+import { useLogger, LogLevel } from "@/hooks/use-logger"
+
+export function UserCard({ userId }: { userId: string }) {
+  const logger = useLogger({
+    prefix: "UserCard",
+    level:  LogLevel.INFO,
+    devOnly: true, // Suppress logs in production automatically
+  })
+
+  useEffect(() => {
+    logger.info("Component mounted", { userId })
+    return () => {
+      logger.debug("Component unmounted", { userId })
+    }
+  }, [userId])
+
+  const handleDelete = async () => {
+    logger.warn("Attempting to delete user", { userId })
+    try {
+      await deleteUser(userId)
+      logger.success("User deleted successfully")
+    } catch (err) {
+      logger.error("Failed to delete user", err)
+    }
+  }
+
+  return (
+    <div>
+      <p>User ID: {userId}</p>
+      <button onClick={handleDelete}>Delete</button>
+    </div>
+  )
+}
+```
+
+### Performance Measurement
+
+```tsx
+import { useLogger } from "@/hooks/use-logger"
+
+export function DataProcessor({ items }: { items: unknown[] }) {
+  const logger = useLogger({ prefix: "DataProcessor" })
+
+  const processItems = () => {
+    logger.time("processItems")
+    const result = items.map(expensiveTransform)
+    logger.timeEnd("processItems")
+    logger.table(result, ["id", "name", "value"])
+    return result
+  }
+
+  return <button onClick={processItems}>Process {items.length} items</button>
+}
+```
+
+### Grouped Logs
+
+```tsx
+import { useLogger } from "@/hooks/use-logger"
+
+export function AuthFlow() {
+  const logger = useLogger()
+
+  const handleLogin = async (email: string, password: string) => {
+    logger.group("Login Flow", () => {
+      logger.info("Validating credentials", { email })
+      logger.debug("Password length", password.length)
+    })
+
+    try {
+      await login(email, password)
+      logger.success("Login successful")
+    } catch (err) {
+      logger.error("Login failed", err)
+    }
+  }
+
+  return <LoginForm onSubmit={handleLogin} />
+}
+```
+
+### Custom Remote Log Handler
+
+```tsx
+import { useLogger, LogLevel } from "@/hooks/use-logger"
+
+export function TrackedComponent() {
+  const logger = useLogger({
+    level: LogLevel.WARN,
+    customHandler: (level, message, data) => {
+      // Send warnings and errors to your observability platform
+      fetch("/api/logs", {
+        method: "POST",
+        body: JSON.stringify({ level, message, data, timestamp: Date.now() }),
+      })
+    },
+  })
+
+  const handleRiskyAction = () => {
+    logger.warn("User performed a risky action")
+  }
+
+  return <button onClick={handleRiskyAction}>Risky Action</button>
+}
+```
+
+## Notes
+
+- All logging methods are memoised with `useCallback` and return stable function references, so they are safe to pass as props or include in `useEffect` dependency arrays.
+- When `devOnly: true`, all methods are no-ops in production. No logs, no overhead.
+- The `colored` option only applies in browser environments — in Node.js (SSR) the hook falls back to plain `console` methods with formatted text.
+- The hook exports `LogLevel` as a named enum so you can use it for comparisons and configuration without hard-coding numbers.

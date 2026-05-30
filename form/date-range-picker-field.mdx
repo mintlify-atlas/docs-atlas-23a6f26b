@@ -1,0 +1,89 @@
+---
+title: "DateRangePickerField: Date Range Selection in ShaddyForm"
+sidebarTitle: "DateRangePickerField"
+description: "DateRangePickerField integrates the DateRangePicker UI component with ShaddyForm, binding a date range object with label and validation support."
+---
+
+`DateRangePickerField` wraps the `DateRangePicker` UI component inside ShaddyForm's form context, allowing users to select a start and end date as a single form field. The bound value is a date range object (with `from` and `to` date properties) that is stored directly in the form state, with validation errors surfaced automatically via `<FormMessage>`.
+
+## Installation
+
+Install all ShaddyForm fields at once with the `shaddy-form` registry item:
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+```
+
+## Usage
+
+```tsx
+"use client"
+import { z } from "zod"
+import { ShaddyForm } from "@/components/form/shaddy-form"
+import { DateRangePickerField } from "@/components/form/fields/date-range-picker-field"
+import { SubmitButton } from "@/components/form/fields/submit-button"
+
+const schema = z.object({
+  bookingRange: z.object({
+    from: z.date({ message: "Start date is required." }),
+    to: z.date({ message: "End date is required." }),
+  }),
+})
+
+type FormValues = z.infer<typeof schema>
+
+const initialValues: FormValues = {
+  bookingRange: {
+    from: new Date(),
+    to: new Date(),
+  },
+}
+
+export default function Example() {
+  return (
+    <ShaddyForm
+      schema={schema}
+      initialValues={initialValues}
+      onSubmit={(data) => console.log(data)}
+    >
+      <div className="space-y-4 w-96">
+        <DateRangePickerField<FormValues>
+          name="bookingRange"
+          label="Booking Period"
+          required
+        />
+        <SubmitButton label="Book Now" />
+      </div>
+    </ShaddyForm>
+  )
+}
+```
+
+## Props
+
+<ParamField path="name" type="Path<T>" required>
+  The field name. Must match a key in your Zod schema passed to `ShaddyForm`. The bound value is a date range object with `from` and `to` properties.
+</ParamField>
+
+<ParamField path="label" type="string">
+  Label text rendered above the date range picker. Omit to hide the label.
+</ParamField>
+
+<ParamField path="required" type="boolean" default="false">
+  When `true`, appends a red asterisk to the label as a visual indicator.
+</ParamField>
+
+<ParamField path="disabled" type="boolean" default="false">
+  Passes the disabled state through to the underlying `DateRangePicker` component.
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes applied to the outermost `FormItem` wrapper.
+</ParamField>
+
+## Notes
+
+- `DateRangePickerField` must be rendered inside a `<ShaddyForm>` — it reads `control` from `useFormContext` internally.
+- The bound value is a date range object. Structure your Zod schema with `z.object({ from: z.date(), to: z.date() })` or similar, and provide matching initial values.
+- For picking a single date, use [`DatePickerField`](/form/date-picker-field) instead.
+- Validation errors are rendered below the date range picker via shadcn/ui's `<FormMessage>`.

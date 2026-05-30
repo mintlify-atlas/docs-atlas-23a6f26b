@@ -1,0 +1,156 @@
+---
+title: "createEnv: Type-Safe Environment Variables"
+sidebarTitle: "createEnv"
+description: "createEnv validates and types your environment variables at startup using Zod, throwing clear errors for missing or malformed values before your app runs."
+---
+
+Environment variable bugs are some of the hardest to catch — a missing `DATABASE_URL` or a malformed API endpoint silently breaks at runtime, often only in production. `createEnv` validates your environment against a Zod schema the moment your module loads, surfacing problems immediately with a clear error message rather than a cryptic runtime failure.
+
+## Installation
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/create-env
+```
+
+<Tip>
+  `createEnv` depends on [Zod](https://zod.dev/). Make sure Zod is installed in your project: `npm install zod`.
+</Tip>
+
+## How It Works
+
+`createEnv` accepts a Zod schema, the runtime values to validate, and an optional client prefix. On the **server**, all variables are validated. On the **client** (wherever `window` is defined), only variables whose key starts with `clientEnvPrefix` are validated and returned — server-only secrets are never exposed to the browser.
+
+If validation fails, a descriptive error is logged to the console and an exception is thrown, stopping your app before it can run with invalid configuration.
+
+## Signature
+
+```ts
+createEnv<T extends ZodType>({
+  schemas,
+  runTimeEnv,
+  clientEnvPrefix?,
+}: CreateEnvType<T>): z.infer<T>
+```
+
+### Types
+
+```ts
+type CreateEnvType<T extends ZodType> = {
+  schemas: T
+  runTimeEnv: z.infer<T>
+  clientEnvPrefix?: string
+}
+```
+
+## Parameters
+
+<ParamField path="schemas" type="ZodType" required>
+  A Zod schema (typically `z.object({...})`) that describes the shape and validation rules for your environment variables.
+</ParamField>
+
+<ParamField path="runTimeEnv" type="z.infer<T>" required>
+  The actual runtime values to validate, e.g. `{ MY_VAR: process.env.MY_VAR }`. The type must match the inferred type of `schemas`.
+</ParamField>
+
+<ParamField path="clientEnvPrefix" type="string" default="NEXT_PUBLIC_">
+  The prefix used to identify client-safe variables. On the client, only keys starting with this prefix are validated and returned. Defaults to `"NEXT_PUBLIC_"` for Next.js projects.
+</ParamField>
+
+## Examples
+
+### Basic usage
+
+Define a schema once in a dedicated `env.ts` file and import `env` wherever you need a validated value:
+
+```ts
+// lib/env.ts
+import { createEnv } from '@/utils/create-env'
+import { z } from 'zod'
+
+export const env = createEnv({
+  schemas: z.object({
+    USER_SPACE_APP_URL: z.string().url().min(1),
+    NEXT_PUBLIC_API_URL: z.string().url(),
+  }),
+  runTimeEnv: {
+    USER_SPACE_APP_URL: process.env.USER_SPACE_APP_URL,
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+  },
+})
+```
+
+If either variable is missing or fails its Zod validation, your app throws before serving any requests:
+
+```
+❌ Invalid environment variables: { USER_SPACE_APP_URL: [ 'Invalid url' ] }
+Error: Invalid environment variables
+```
+
+### Separating server and client variables
+
+```ts
+// lib/env.ts
+import { createEnv } from '@/utils/create-env'
+import { z } from 'zod'
+
+export const env = createEnv({
+  schemas: z.object({
+    // Server-only — never sent to the browser
+    DATABASE_URL: z.string().url(),
+    SECRET_KEY: z.string().min(32),
+    // Client-safe — exposed via NEXT_PUBLIC_ prefix
+    NEXT_PUBLIC_APP_URL: z.string().url(),
+    NEXT_PUBLIC_ANALYTICS_ID: z.string().min(1),
+  }),
+  runTimeEnv: {
+    DATABASE_URL: process.env.DATABASE_URL,
+    SECRET_KEY: process.env.SECRET_KEY,
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_ANALYTICS_ID: process.env.NEXT_PUBLIC_ANALYTICS_ID,
+  },
+})
+```
+
+### Custom client prefix
+
+If you're not using Next.js, change the prefix to match your framework's convention:
+
+```ts
+import { createEnv } from '@/utils/create-env'
+import { z } from 'zod'
+
+export const env = createEnv({
+  schemas: z.object({
+    PUBLIC_API_URL: z.string().url(),
+    PUBLIC_STRIPE_KEY: z.string().min(1),
+  }),
+  runTimeEnv: {
+    PUBLIC_API_URL: process.env.PUBLIC_API_URL,
+    PUBLIC_STRIPE_KEY: process.env.PUBLIC_STRIPE_KEY,
+  },
+  clientEnvPrefix: 'PUBLIC_',
+})
+```
+
+### Consuming validated env values
+
+```ts
+// In any server or shared module
+import { env } from '@/lib/env'
+
+const response = await fetch(env.NEXT_PUBLIC_API_URL + '/users')
+```
+
+Because `env` is fully typed via `z.infer<T>`, your editor will autocomplete variable names and flag typos at compile time.
+
+<Note>
+  Call `createEnv` at module load time — not inside a function or component — so validation errors surface immediately when your server starts or when the browser bundle executes, rather than on the first request that happens to use that variable.
+</Note>
+
+## Benefits
+
+- **Type-safe** — Zod inference gives you a fully typed `env` object with no manual type declarations.
+- **Secure** — client-prefix filtering ensures server secrets never reach the browser.
+- **Fail-fast** — validation errors throw at startup, not at request time.
+- **Helpful errors** — logs the exact keys and Zod error details so you know exactly what to fix.
+- **Flexible** — works in Next.js, Vite, Remix, or any TypeScript project with a configurable `clientEnvPrefix`.

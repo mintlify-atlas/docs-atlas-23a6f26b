@@ -1,0 +1,69 @@
+---
+title: "Shaddy: One-Stop Frontend Resource Library"
+sidebarTitle: "Introduction"
+description: "Shaddy is an open-source frontend library providing reusable UI components, typed React hooks, a schema-driven form system, utilities, and React design pattern guides."
+---
+
+Shaddy is an open-source frontend resource library built on top of Next.js and shadcn/ui, written entirely in TypeScript. This page introduces what Shaddy is, the problem it solves, and the key resource areas it covers — giving you everything you need to understand whether Shaddy is the right fit for your project.
+
+## What Is Shaddy?
+
+Modern frontend development is full of repetitive boilerplate: the same boolean toggle hook gets rewritten in every project, the same form wiring with `react-hook-form` and Zod gets duplicated, and the same small utility functions get copy-pasted endlessly. Shaddy exists to end that cycle.
+
+Rather than shipping as a traditional npm package that you install and import from, Shaddy works like shadcn/ui itself — resources live in a public registry and are pulled directly into **your** codebase via the `shadcn` CLI. You own the code, can customize it freely, and are never locked into a versioned dependency.
+
+Shaddy's goal is simple: be a **one-stop frontend solution** — a curated, production-quality collection of components, hooks, form primitives, utilities, and architectural patterns that any Next.js project can adopt immediately.
+
+## Key Feature Areas
+
+<CardGroup cols={2}>
+  <Card title="UI Components" icon="puzzle-piece" href="/ui">
+    Accessible, composable components built on Radix UI and styled with Tailwind CSS — including a Stepper, Date Range Picker, Autosize Textarea, Loading Spinner, and more.
+  </Card>
+  <Card title="Typed Hooks" icon="hook" href="/hooks/overview">
+    Production-ready React hooks with full TypeScript signatures — `useBoolean`, `useDebounce`, `useClipboardCopy`, and a growing collection of daily-use primitives.
+  </Card>
+  <Card title="Form System" icon="table-list" href="/form">
+    A schema-driven form system powered by `react-hook-form` and Zod. The `ShaddyForm` component wires up validation, default values, and submission with a single generic wrapper.
+  </Card>
+  <Card title="Utilities" icon="wrench" href="/utils">
+    Typed helper functions for common operations — string manipulation, date formatting, object merging, and more — ready to drop into any TypeScript project.
+  </Card>
+  <Card title="React Patterns" icon="book-open" href="/patterns/overview">
+    Practical guides covering proven React design patterns and architectural techniques to help teams write more maintainable, scalable frontend code.
+  </Card>
+</CardGroup>
+
+## Tech Stack
+
+Shaddy is built on a carefully chosen, modern frontend stack:
+
+| Technology | Role |
+|---|---|
+| **Next.js 15** (App Router) | Core framework powering the docs site and registry |
+| **TypeScript 5** | End-to-end type safety across all components, hooks, and utilities |
+| **Tailwind CSS 4** | Utility-first styling for every UI component |
+| **Radix UI** | Accessible, unstyled component primitives for the UI layer |
+| **react-hook-form** | Performant, flexible form state management |
+| **Zod** | Runtime schema validation for the form system |
+| **next-intl** | Internationalization support (English and Portuguese) |
+
+## Monorepo Architecture
+
+Shaddy is organized as a **Turborepo monorepo** managed with **pnpm workspaces**, keeping all apps and shared packages in a single repository with fast, cached builds.
+
+```
+shaddy/
+├── apps/
+│   ├── web/          # Next.js docs site and registry server
+│   └── content/      # MDX documentation content
+└── packages/
+    ├── eslint-config/ # Shared ESLint configuration
+    └── typescript-config/ # Shared TypeScript configuration
+```
+
+The `apps/web` package is the heart of the project — it hosts the documentation site, builds the component registry, and serves all installable resources at `https://shaddy-docs.vercel.app/r/`.
+
+<Note>
+  Shaddy is open-source and released under the **MIT License**. You are free to use, modify, and distribute any Shaddy resource in personal and commercial projects. Contributions from the community are warmly welcome — see the [Contributing guide](/contributing) to get involved.
+</Note>

@@ -1,0 +1,311 @@
+---
+title: "Function as Children Pattern in React"
+sidebarTitle: "Function Children"
+description: "The Function as Children pattern passes a function as the children prop, letting a component control when and how the child renders with shared state."
+---
+
+The Function as Children pattern — also called Children as a Function or Function as Child Component (FaCC) — is a specialised form of the Render Props pattern. Instead of a named prop like `render`, the `children` prop itself is a function. The parent component calls it with state and methods, giving callers complete control over what gets rendered in exchange for that state.
+
+## The Problem
+
+Static children can't access the internal state of their parent. This limits what you can build with normal component composition:
+
+```tsx
+// ❌ Static children can't see the container's state
+function DataContainer({ data, children }) {
+  return (
+    <div className="data-container">
+      {children} {/* No way to pass loading/error state to children */}
+    </div>
+  )
+}
+
+<DataContainer data={users}>
+  <div>How do I access loading state here?</div>
+</DataContainer>
+```
+
+## The Solution
+
+Make `children` a function. The parent calls it with whatever state the child needs:
+
+```tsx
+<DataContainer>
+  {({ data, loading, error }) => {
+    if (loading) return <Spinner />
+    if (error) return <ErrorMessage message={error.message} />
+    return <UserList users={data} />
+  }}
+</DataContainer>
+```
+
+The parent manages the async lifecycle; the caller decides how each state is displayed.
+
+## Basic Example: Toggle
+
+A toggle component that exposes its `on` boolean and a `toggle` function through its children:
+
+```tsx
+// components/Toggle.tsx
+import { useState, ReactNode } from 'react'
+
+interface ToggleState {
+  on: boolean
+  toggle: () => void
+  setOn: (value: boolean) => void
+}
+
+interface ToggleProps {
+  children: (state: ToggleState) => ReactNode
+  initialState?: boolean
+}
+
+export function Toggle({ children, initialState = false }: ToggleProps) {
+  const [on, setOn] = useState(initialState)
+  const toggle = () => setOn((prev) => !prev)
+
+  return <>{children({ on, toggle, setOn })}</>
+}
+```
+
+The caller decides exactly how `on` and `toggle` are used:
+
+```tsx
+import { Toggle } from './components/Toggle'
+
+export function App() {
+  return (
+    <div className="p-8 space-y-6">
+      {/* Simple button toggle */}
+      <Toggle>
+        {({ on, toggle }) => (
+          <button
+            onClick={toggle}
+            className={`px-4 py-2 rounded ${on ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-700'}`}
+          >
+            {on ? 'ON' : 'OFF'}
+          </button>
+        )}
+      </Toggle>
+
+      {/* Toggle controlling visibility of a details panel */}
+      <Toggle>
+        {({ on, toggle }) => (
+          <div>
+            <button onClick={toggle} className="px-4 py-2 bg-blue-500 text-white rounded">
+              {on ? 'Hide' : 'Show'} Details
+            </button>
+            {on && (
+              <div className="mt-2 p-4 bg-blue-50 border border-blue-200 rounded">
+                <p>This content is conditionally rendered!</p>
+              </div>
+            )}
+          </div>
+        )}
+      </Toggle>
+    </div>
+  )
+}
+```
+
+## Advanced Example: Async Data Loader
+
+A generic async loader that manages loading, error, and reload state, exposing them all through its `children` function:
+
+```tsx
+// components/AsyncLoader.tsx
+import { useState, useEffect, ReactNode } from 'react'
+
+interface AsyncState<T> {
+  data: T | null
+  loading: boolean
+  error: Error | null
+  reload: () => void
+}
+
+interface AsyncLoaderProps<T> {
+  children: (state: AsyncState<T>) => ReactNode
+  loadData: () => Promise<T>
+  dependencies?: any[]
+}
+
+export function AsyncLoader<T>({ children, loadData, dependencies = [] }: AsyncLoaderProps<T>) {
+  const [data, setData] = useState<T | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+  const [reloadTrigger, setReloadTrigger] = useState(0)
+
+  const reload = () => setReloadTrigger((prev) => prev + 1)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const result = await loadData()
+        if (!cancelled) setData(result)
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err : new Error('Unknown error'))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    fetchData()
+    return () => { cancelled = true }
+  }, [...dependencies, reloadTrigger])
+
+  return <>{children({ data, loading, error, reload })}</>
+}
+```
+
+Using `AsyncLoader` with a typed data shape:
+
+```tsx
+import { AsyncLoader } from './components/AsyncLoader'
+
+interface User {
+  id: number
+  name: string
+  email: string
+  stats: { posts: number; followers: number; following: number }
+}
+
+async function fetchUserData(userId: number): Promise<User> {
+  const response = await fetch(`/api/users/${userId}`)
+  if (!response.ok) throw new Error('Failed to fetch user')
+  return response.json()
+}
+
+export function UserDashboard({ userId }: { userId: number }) {
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <AsyncLoader loadData={() => fetchUserData(userId)} dependencies={[userId]}>
+        {({ data, loading, error, reload }) => {
+          if (loading) {
+            return (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4" />
+                  <p className="text-gray-600">Loading user data...</p>
+                </div>
+              </div>
+            )
+          }
+
+          if (error) {
+            return (
+              <div className="p-6 bg-red-50 border border-red-200 rounded-lg">
+                <h3 className="text-lg font-semibold text-red-800 mb-2">Error</h3>
+                <p className="text-red-600 mb-4">{error.message}</p>
+                <button onClick={reload} className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+                  Try Again
+                </button>
+              </div>
+            )
+          }
+
+          if (!data) return <p className="text-center text-gray-500">No data available</p>
+
+          return (
+            <div className="bg-white shadow rounded-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
+                <h1 className="text-3xl font-bold">{data.name}</h1>
+                <p className="text-blue-100">{data.email}</p>
+              </div>
+
+              <div className="p-6">
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="text-center p-4 bg-gray-50 rounded">
+                    <p className="text-2xl font-bold text-gray-900">{data.stats.posts}</p>
+                    <p className="text-sm text-gray-600">Posts</p>
+                  </div>
+                  <div className="text-center p-4 bg-gray-50 rounded">
+                    <p className="text-2xl font-bold text-gray-900">{data.stats.followers}</p>
+                    <p className="text-sm text-gray-600">Followers</p>
+                  </div>
+                  <div className="text-center p-4 bg-gray-50 rounded">
+                    <p className="text-2xl font-bold text-gray-900">{data.stats.following}</p>
+                    <p className="text-sm text-gray-600">Following</p>
+                  </div>
+                </div>
+
+                <button onClick={reload} className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                  Refresh Data
+                </button>
+              </div>
+            </div>
+          )
+        }}
+      </AsyncLoader>
+    </div>
+  )
+}
+```
+
+## Relationship to Render Props
+
+Function Children is a variant of the Render Props pattern. The only difference is naming: render props use an explicit named prop (e.g. `render={...}`), while function children use the special `children` prop. Both achieve the same result — sharing state by calling a function — but `children` has slightly cleaner JSX syntax:
+
+```tsx
+// Render Props — explicit named prop
+<MouseTracker render={({ x, y }) => <Cursor x={x} y={y} />} />
+
+// Function Children — children is the function
+<MouseTracker>
+  {({ x, y }) => <Cursor x={x} y={y} />}
+</MouseTracker>
+```
+
+Functionally equivalent. The function-children form is slightly more readable because the visual relationship between the parent and its output is clear from the JSX nesting.
+
+## Function Children vs Custom Hooks
+
+```tsx
+// Function Children — declarative, component-based
+<Toggle>
+  {({ on, toggle }) => <button onClick={toggle}>{on ? 'ON' : 'OFF'}</button>}
+</Toggle>
+
+// Custom Hook — imperative, hook-based
+function useToggle(initial = false) {
+  const [on, setOn] = useState(initial)
+  const toggle = () => setOn((prev) => !prev)
+  return { on, toggle, setOn }
+}
+
+function App() {
+  const { on, toggle } = useToggle()
+  return <button onClick={toggle}>{on ? 'ON' : 'OFF'}</button>
+}
+```
+
+**Choose Function Children when:**
+- You are building a component library with a JSX-first, declarative API.
+- You need to control the component tree structure.
+- Providing render flexibility is a primary goal.
+
+**Choose Custom Hooks when:**
+- You are writing application code.
+- You only need to share logic, not control rendering.
+- You want cleaner component bodies and better composability.
+
+## When to Use
+
+- Children need direct access to state managed by their parent.
+- You want to expose multiple values and callbacks to a caller without prop drilling.
+- You are building reusable utility or library components.
+- You want a declarative API where data flow is visible at the call site.
+
+## When Not to Use
+
+- A custom hook solves the problem more cleanly.
+- The nesting becomes too deep — multiple nested function-children components are hard to read.
+- Children don't need any parent state and static composition is fine.
+- The function creates performance problems from constant re-creation (use `useCallback` to mitigate).
+
+<Note>
+  Always handle all states — loading, error, empty, and success — inside the children function. Components that expose a children function should not render fallback UI themselves; that responsibility belongs to the caller.
+</Note>

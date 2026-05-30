@@ -1,0 +1,173 @@
+---
+title: "FieldArray: Dynamic List Fields in ShaddyForm"
+sidebarTitle: "FieldArray"
+description: "FieldArray lets you render a dynamic list of form fields backed by react-hook-form's useFieldArray, with built-in add and remove controls."
+---
+
+Many real-world forms require the user to enter a variable number of items — a list of phone numbers, a set of product variants, a collection of addresses. Managing a dynamic list with `react-hook-form`'s `useFieldArray` requires wiring up the hook, passing `control`, and tracking the array state yourself. `FieldArray` wraps all of that into a single declarative component.
+
+## How It Works
+
+`FieldArray` uses the **function-as-children** (render props) pattern. It calls `useFieldArray` internally with the correct `control` from `useFormContext`, then passes the full `UseFieldArrayReturn` object to your render function. You get `fields`, `append`, `remove`, `prepend`, `update`, and every other method from `useFieldArray` without writing any hook calls yourself.
+
+```tsx
+// Internally, FieldArray does this for you:
+const { control } = useFormContext<T>();
+const fieldArray = useFieldArray({ control, name });
+return children(fieldArray);
+```
+
+## Installation
+
+<Steps>
+  <Step title="Install via CLI">
+    The quickest way to add `FieldArray` to your project:
+
+    ```bash
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/field-array
+    ```
+  </Step>
+  <Step title="Or install manually">
+    First ensure `ShaddyForm` is installed:
+
+    ```bash
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+    ```
+
+    Then copy the component source into your project and update import paths.
+  </Step>
+</Steps>
+
+## Props
+
+<ParamField path="name" type="ArrayPath<T>" required>
+  The dot-notation path to the array field in your schema. Must match an array key in your Zod schema (e.g., `"items"`, `"phoneNumbers"`). The generic type `T` is inferred from the surrounding `ShaddyForm`.
+</ParamField>
+
+<ParamField path="children" type="(fieldArray: UseFieldArrayReturn<T, ArrayPath<T>>) => ReactNode" required>
+  A render function that receives the full `useFieldArray` return value. Use the destructured `fields`, `append`, and `remove` (among others) to build your dynamic list UI.
+</ParamField>
+
+## Usage
+
+The `children` function receives a `UseFieldArrayReturn` object. The most commonly used properties are:
+
+| Property | Type | Description |
+|---|---|---|
+| `fields` | `FieldArrayWithId[]` | The current list of items. Each has a stable `id` to use as the React `key`. |
+| `append` | `(value) => void` | Adds a new item to the end of the list. |
+| `prepend` | `(value) => void` | Adds a new item to the beginning of the list. |
+| `remove` | `(index) => void` | Removes the item at the given index. |
+| `update` | `(index, value) => void` | Replaces the item at the given index. |
+| `move` | `(from, to) => void` | Moves an item from one position to another. |
+
+## Example: Dynamic Contact List
+
+The example below builds a form that lets the user add and remove contact entries, each containing a name and an email address.
+
+```tsx
+import z from "zod";
+import { ShaddyForm } from "@/components/form/shaddy-form";
+import { FieldArray } from "@/components/form/field-array";
+import { TextField } from "@/components/form/fields/text-field";
+import { SubmitButton } from "@/components/form/fields/submit-button";
+import { Button } from "@/components/ui/button";
+
+const contactsSchema = z.object({
+  contacts: z.array(
+    z.object({
+      name: z.string().min(1, { message: "Name is required" }),
+      email: z.string().email({ message: "Invalid email address" }),
+    })
+  ).min(1, { message: "Add at least one contact" }),
+});
+
+type ContactsForm = z.infer<typeof contactsSchema>;
+
+const initialValues: ContactsForm = {
+  contacts: [{ name: "", email: "" }],
+};
+
+export function ContactListForm() {
+  return (
+    <ShaddyForm
+      schema={contactsSchema}
+      initialValues={initialValues}
+      onSubmit={(data) => console.log("Contacts:", data)}
+    >
+      <div className="space-y-4 w-full max-w-lg">
+        <FieldArray<ContactsForm> name="contacts">
+          {({ fields, append, remove }) => (
+            <div className="space-y-4">
+              {fields.map((field, index) => (
+                <div key={field.id} className="flex gap-2 items-start">
+                  <div className="flex-1 space-y-2">
+                    <TextField<ContactsForm>
+                      name={`contacts.${index}.name`}
+                      label="Name"
+                      placeholder="Contact name"
+                    />
+                    <TextField<ContactsForm>
+                      name={`contacts.${index}.email`}
+                      label="Email"
+                      placeholder="contact@example.com"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="mt-8"
+                    onClick={() => remove(index)}
+                    disabled={fields.length === 1}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => append({ name: "", email: "" })}
+              >
+                + Add Contact
+              </Button>
+            </div>
+          )}
+        </FieldArray>
+
+        <SubmitButton label="Save Contacts" />
+      </div>
+    </ShaddyForm>
+  );
+}
+```
+
+<Note>
+  Always use `field.id` (not `index`) as the React `key` for array items. `react-hook-form` assigns a stable, unique `id` to each entry that does not change when items are reordered or removed. Using `index` as a key causes subtle state bugs when the list changes.
+</Note>
+
+## Nesting FieldArrays
+
+`FieldArray` can be nested to support multi-level dynamic structures. Ensure that each `name` prop reflects the correct dot-notation path to the nested array within the schema.
+
+```tsx
+<FieldArray<FormValues> name="sections">
+  {({ fields: sections, append: appendSection }) =>
+    sections.map((section, sectionIndex) => (
+      <FieldArray<FormValues> key={section.id} name={`sections.${sectionIndex}.items`}>
+        {({ fields: items, append: appendItem }) =>
+          items.map((item, itemIndex) => (
+            <TextField<FormValues>
+              key={item.id}
+              name={`sections.${sectionIndex}.items.${itemIndex}.title`}
+              label="Item Title"
+            />
+          ))
+        }
+      </FieldArray>
+    ))
+  }
+</FieldArray>
+```

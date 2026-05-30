@@ -1,0 +1,49 @@
+---
+title: "Utilities: Helpers for React and Next.js Apps"
+sidebarTitle: "Overview"
+description: "Shaddy utilities provide reusable TypeScript helpers for React and Next.js, including provider composition and type-safe environment variable handling."
+---
+
+Utility functions are commonly used, reusable pieces of code that save hours of development time and reduce duplication across a project. Shaddy's utilities are purpose-built for React and Next.js workflows — they cover areas that general-purpose libraries like Lodash don't address, such as React context composition and runtime environment variable validation.
+
+## What's Included
+
+Each utility is available as a single TypeScript file you can add directly to your project via the Shadcn CLI. No extra runtime dependencies are required beyond what each utility explicitly uses.
+
+| Utility | Description |
+|---|---|
+| `composeProviders` | Combine multiple React context providers into one component, eliminating deeply nested JSX trees. |
+| `createEnv` | Validate and type-check environment variables at startup using a Zod schema, with client/server separation. |
+
+## Installation Pattern
+
+Every utility follows the same Shadcn-compatible install flow:
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/<utility-name>
+```
+
+This copies a single TypeScript source file into your project under `utils/`. You own the code — update or extend it however you like.
+
+<Note>
+  Each utility page includes both a CLI install command and a manual copy-paste option if you prefer to inspect the code before adding it.
+</Note>
+
+## Utilities
+
+<CardGroup cols={2}>
+  <Card
+    title="composeProviders"
+    icon="layers"
+    href="/utils/compose-providers"
+  >
+    Compose multiple React context providers into a single wrapper component and eliminate provider nesting from your app root.
+  </Card>
+  <Card
+    title="createEnv"
+    icon="shield-check"
+    href="/utils/create-env"
+  >
+    Validate environment variables against a Zod schema at startup, with clear errors for missing or invalid values and automatic client-prefix filtering.
+  </Card>
+</CardGroup>

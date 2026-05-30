@@ -1,0 +1,97 @@
+---
+title: "useDefault: State with Fallback Value for React"
+sidebarTitle: "useDefault"
+description: "Manage stateful values in React with an automatic fallback — whenever the value is set to null or undefined, the hook transparently substitutes a default."
+---
+
+`useDefault` is a React hook that manages a stateful value and automatically substitutes a default fallback whenever the state would otherwise become `null` or `undefined`. This removes the need to sprinkle `value ?? defaultValue` throughout your JSX — the hook guarantees the returned value is always of type `T`, never nullable. It is ideal for form fields, configuration panels, and any scenario where a sensible default should silently replace a missing value.
+
+## Installation
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/use-default
+```
+
+## Signature
+
+```typescript
+type Nullable<T> = T | null | undefined
+
+const useDefault = <T = any>(
+  initialValue: T,
+  defaultValue: T
+): [T, (newValue: Nullable<T>) => void]
+```
+
+## Parameters
+
+<ParamField path="initialValue" type="T" required>
+  The value the state is initialised with. Can be any type, including objects and arrays.
+</ParamField>
+
+<ParamField path="defaultValue" type="T" required>
+  The fallback value that is used whenever the setter receives `null` or `undefined`. Must be the same type as `initialValue`.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="[0]" type="T">
+  The current state value. This is always of type `T` — it is never `null` or `undefined` because the hook automatically replaces those with `defaultValue`.
+</ResponseField>
+
+<ResponseField name="[1]" type="(newValue: Nullable<T>) => void">
+  A setter function. When called with a non-nullish value it stores that value directly; when called with `null` or `undefined` it stores `defaultValue` instead.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useDefault } from "@/hooks/use-default"
+
+export function UsernameInput() {
+  const [username, setUsername] = useDefault<string>("", "Anonymous")
+
+  return (
+    <div>
+      <p>Username: {username}</p>
+
+      <button onClick={() => setUsername("Alice")}>Set to Alice</button>
+
+      {/* Passing null triggers the default fallback */}
+      <button onClick={() => setUsername(null)}>Clear (fallback to "Anonymous")</button>
+
+      {/* Passing undefined also triggers the fallback */}
+      <button onClick={() => setUsername(undefined)}>
+        Set undefined (fallback to "Anonymous")
+      </button>
+    </div>
+  )
+}
+```
+
+### With Objects
+
+```tsx
+import { useDefault } from "@/hooks/use-default"
+
+type Theme = { color: string; fontSize: number }
+
+const DEFAULT_THEME: Theme = { color: "#000000", fontSize: 16 }
+
+export function ThemeEditor() {
+  const [theme, setTheme] = useDefault<Theme>({ color: "#3b82f6", fontSize: 14 }, DEFAULT_THEME)
+
+  return (
+    <div style={{ color: theme.color, fontSize: theme.fontSize }}>
+      <p>Current theme: {JSON.stringify(theme)}</p>
+      <button onClick={() => setTheme(null)}>Reset to default theme</button>
+    </div>
+  )
+}
+```
+
+## Notes
+
+- The fallback is applied via the nullish coalescing operator (`??`), so only `null` and `undefined` trigger the default — falsy values like `0`, `false`, or `""` are stored as-is.
+- The returned value is typed as `T` (not `T | null | undefined`), so downstream code never needs additional null checks.
+- The hook is generic with a default type parameter of `any`, but TypeScript infers `T` automatically from your `initialValue` argument in most cases.

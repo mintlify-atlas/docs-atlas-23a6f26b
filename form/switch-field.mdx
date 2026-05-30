@@ -1,0 +1,103 @@
+---
+title: "SwitchField: Toggle Switch for ShaddyForm"
+sidebarTitle: "SwitchField"
+description: "SwitchField renders a shadcn/ui Switch toggle inside ShaddyForm, mapping boolean values to a labeled on/off control with validation support."
+---
+
+`SwitchField` integrates shadcn/ui's `Switch` component with ShaddyForm's form context, binding a boolean form value to a toggle control. It supports flexible layout options — vertical or horizontal arrangement, configurable gap, and the ability to reverse the label/switch order — making it easy to match a variety of UI patterns without extra wrapper markup.
+
+## Installation
+
+Install all ShaddyForm fields at once with the `shaddy-form` registry item:
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+```
+
+## Usage
+
+```tsx
+"use client"
+import { z } from "zod"
+import { ShaddyForm } from "@/components/form/shaddy-form"
+import { SwitchField } from "@/components/form/fields/switch-field"
+import { SubmitButton } from "@/components/form/fields/submit-button"
+
+const schema = z.object({
+  notifications: z.boolean(),
+  darkMode: z.boolean(),
+})
+
+type FormValues = z.infer<typeof schema>
+
+const initialValues: FormValues = { notifications: true, darkMode: false }
+
+export default function Example() {
+  return (
+    <ShaddyForm
+      schema={schema}
+      initialValues={initialValues}
+      onSubmit={(data) => console.log(data)}
+    >
+      <div className="space-y-6 w-80">
+        <SwitchField<FormValues>
+          name="notifications"
+          label="Enable Notifications"
+          longGap
+        />
+        <SwitchField<FormValues>
+          name="darkMode"
+          label="Dark Mode"
+          reverse
+          gap="4"
+        />
+        <SubmitButton label="Save Preferences" />
+      </div>
+    </ShaddyForm>
+  )
+}
+```
+
+## Props
+
+<ParamField path="name" type="Path<T>" required>
+  The field name. Must match a key in your Zod schema passed to `ShaddyForm`.
+</ParamField>
+
+<ParamField path="label" type="string">
+  Label text rendered next to (or above, when `column` is `true`) the switch. Omit to render the switch without a visible label.
+</ParamField>
+
+<ParamField path="required" type="boolean" default="false">
+  When `true`, appends a red asterisk to the label as a visual indicator.
+</ParamField>
+
+<ParamField path="disabled" type="boolean" default="false">
+  Disables the underlying `Switch` component when `true`.
+</ParamField>
+
+<ParamField path="column" type="boolean" default="false">
+  When `true`, arranges the switch and label in a vertical column (`flex-col`) instead of the default horizontal row.
+</ParamField>
+
+<ParamField path="longGap" type="boolean" default="false">
+  When `true`, pushes the switch and label to opposite ends of their container with `justify-between`. Useful for settings-list layouts.
+</ParamField>
+
+<ParamField path="reverse" type="boolean" default="false">
+  When `true`, renders the label before the switch (label on the left, switch on the right). By default the switch appears first.
+</ParamField>
+
+<ParamField path="gap" type="'2' | '4' | '6' | '8'" default="'2'">
+  The Tailwind gap class applied between the switch and its label.
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes applied to the outermost `FormItem` wrapper.
+</ParamField>
+
+## Notes
+
+- `SwitchField` must be rendered inside a `<ShaddyForm>` — it reads `control` from `useFormContext` internally.
+- The bound value is a `boolean`. Initialise your schema field with `z.boolean()` and set a matching boolean `initialValues` entry.
+- Validation messages are rendered via `<FormMessage>` and are clamped to one line to keep the layout compact.

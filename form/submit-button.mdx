@@ -1,0 +1,198 @@
+---
+title: "SubmitButton: Form Submission Control"
+sidebarTitle: "Submit Button"
+description: "SubmitButton is a shadcn/ui Button pre-wired to ShaddyForm's submit handler, automatically disabling while the form submits."
+---
+
+Every form needs a way to submit, and `SubmitButton` provides a consistent, accessible submit control that works out of the box with `ShaddyForm`. It renders a `shadcn/ui` `Button` with `type="submit"`, supports loading and disabled states, and accepts a custom label, loading label, and icons — making it straightforward to reflect async submission progress.
+
+## Installation
+
+<Steps>
+  <Step title="Install via CLI">
+    ```bash
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/submit-button
+    ```
+  </Step>
+  <Step title="Or install manually">
+    First ensure `ShaddyForm` is installed:
+
+    ```bash
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+    ```
+
+    Then copy the `SubmitButton` component source into your project and update import paths.
+  </Step>
+</Steps>
+
+## Props
+
+<ParamField path="label" type="string" default='"Save Changes"'>
+  The text displayed on the button in its default (non-loading) state.
+</ParamField>
+
+<ParamField path="loadingLabel" type="string" default='"Saving..."'>
+  The text displayed when `isLoading` is `true`. Replaces `label` during the loading state.
+</ParamField>
+
+<ParamField path="isLoading" type="boolean" default="false">
+  When `true`, renders the `loadingLabel` instead of `label`, displays the `loadingIcon` with a spin animation, and disables the button to prevent duplicate submissions.
+</ParamField>
+
+<ParamField path="disabled" type="boolean" default="false">
+  Disables the button without changing its label. Use this when the form should not be submitted for a reason other than an ongoing request (e.g., a required acceptance checkbox is unchecked).
+</ParamField>
+
+<ParamField path="icon" type="ReactNode">
+  An icon element rendered before the `label` in the default state. Any React node is accepted — typically a Lucide icon component.
+</ParamField>
+
+<ParamField path="loadingIcon" type="ReactNode">
+  An icon element rendered with a CSS spin animation when `isLoading` is `true`. Typically a spinner or loading icon.
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes applied to the button element. Merged with the component's own classes (`w-full gap-2`) using `cn`.
+</ParamField>
+
+<ParamField path="...props" type="ButtonProps">
+  All other props from the `shadcn/ui` `Button` component are forwarded — including `variant`, `size`, and any HTML button attributes.
+</ParamField>
+
+## Basic Usage
+
+Place `SubmitButton` anywhere inside a `ShaddyForm`. No additional wiring is needed — it uses `type="submit"` and relies on the form's native submit event.
+
+```tsx
+import z from "zod";
+import { ShaddyForm } from "@/components/form/shaddy-form";
+import { TextField } from "@/components/form/fields/text-field";
+import { SubmitButton } from "@/components/form/fields/submit-button";
+
+const schema = z.object({
+  email: z.string().email({ message: "Invalid email address" }),
+});
+
+type FormValues = z.infer<typeof schema>;
+
+export function NewsletterForm() {
+  return (
+    <ShaddyForm<FormValues>
+      schema={schema}
+      initialValues={{ email: "" }}
+      onSubmit={(data) => console.log("Subscribed:", data.email)}
+    >
+      <div className="space-y-4 w-80">
+        <TextField<FormValues>
+          name="email"
+          label="Email Address"
+          placeholder="you@example.com"
+          required
+        />
+        <SubmitButton label="Subscribe" />
+      </div>
+    </ShaddyForm>
+  );
+}
+```
+
+## With Loading State
+
+Track your async submission and pass the result to `isLoading` to give users clear feedback while the request is in flight.
+
+```tsx
+import { useState } from "react";
+import { Loader2, Send } from "lucide-react";
+
+export function ContactForm() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (data: FormValues) => {
+    setIsSubmitting(true);
+    try {
+      await sendMessage(data);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <ShaddyForm
+      schema={contactSchema}
+      initialValues={initialValues}
+      onSubmit={handleSubmit}
+    >
+      <div className="space-y-4">
+        <TextField name="name" label="Name" />
+        <TextField name="message" label="Message" />
+        <SubmitButton
+          label="Send Message"
+          loadingLabel="Sending…"
+          icon={<Send size={16} />}
+          loadingIcon={<Loader2 size={16} />}
+          isLoading={isSubmitting}
+        />
+      </div>
+    </ShaddyForm>
+  );
+}
+```
+
+<Note>
+  When `isLoading` is `true`, the button renders as `disabled` regardless of the `disabled` prop value. This prevents double-submission without requiring any additional state management.
+</Note>
+
+## Component Source (TypeScript)
+
+```tsx
+import { cn } from "@/lib/utils";
+import { FC, ReactNode } from "react";
+import { Button, ButtonProps } from "@/components/ui/button";
+
+type SubmitButtonProps = ButtonProps & {
+  isLoading?: boolean;
+  disabled?: boolean;
+  label?: string;
+  loadingLabel?: string;
+  icon?: ReactNode;
+  loadingIcon?: ReactNode;
+  className?: string;
+};
+
+export const SubmitButton: FC<SubmitButtonProps> = ({
+  isLoading = false,
+  disabled = false,
+  label = "Save Changes",
+  loadingLabel = "Saving...",
+  icon,
+  loadingIcon,
+  className,
+  ...props
+}) => {
+  if (isLoading) {
+    return (
+      <Button
+        className={cn("w-full gap-2", className)}
+        type="submit"
+        disabled
+        {...props}
+      >
+        <span className="animate-spin">{loadingIcon}</span>
+        {loadingLabel}
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      className={cn("w-full gap-2", className)}
+      type="submit"
+      disabled={disabled}
+      {...props}
+    >
+      {icon}
+      {label}
+    </Button>
+  );
+};
+```

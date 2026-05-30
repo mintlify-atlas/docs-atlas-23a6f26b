@@ -1,0 +1,149 @@
+---
+title: "composeProviders: Nest React Context Providers Cleanly"
+sidebarTitle: "composeProviders"
+description: "composeProviders composes multiple React context providers into a single component, eliminating deeply nested JSX provider trees in your app root."
+---
+
+As React applications grow, the root layout typically accumulates a long chain of context providers — auth, theme, i18n, query client, and more. `composeProviders` flattens that chain into a single, readable component that is easy to extend or reorder without touching JSX structure.
+
+## Installation
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/compose-providers
+```
+
+<Tip>
+  You can also copy the source manually. The utility is a single TypeScript file with no runtime dependencies beyond React.
+</Tip>
+
+## The Provider Hell Problem
+
+Without `composeProviders`, a typical app root ends up looking like this:
+
+```tsx
+// ❌ Before — deeply nested providers
+<AuthProvider>
+  <ThemeProvider>
+    <LocalizationProvider>
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </LocalizationProvider>
+  </ThemeProvider>
+</AuthProvider>
+```
+
+Every new provider adds another level of indentation and another file to update. `composeProviders` collapses this into a flat array:
+
+```tsx
+// ✅ After — a single composed wrapper
+import { composeProviders } from '@/utils/compose-providers'
+import { AuthProvider } from './auth'
+import { ThemeProvider } from './theme'
+import { LocalizationProvider } from './localization'
+import { QueryClientProvider } from '@tanstack/react-query'
+
+const AppProviders = composeProviders([
+  AuthProvider,
+  ThemeProvider,
+  LocalizationProvider,
+  [QueryClientProvider, { client: queryClient }],
+])
+
+export default function RootLayout({ children }) {
+  return <AppProviders>{children}</AppProviders>
+}
+```
+
+## Signature
+
+```ts
+composeProviders(providers, displayName?): React.FC<React.PropsWithChildren<{}>>
+```
+
+### `ProviderConfig` type
+
+Each entry in the `providers` array is a `ProviderConfig`, which is either:
+
+- A plain React component: `React.ComponentType<P>`
+- A tuple of a component and its props: `[React.ComponentType<P>, P]`
+
+```ts
+type ComponentAndProps<P> = [React.ComponentType<P>, P]
+type ProviderConfig<P = any> = React.ComponentType<P> | ComponentAndProps<P>
+```
+
+The first provider in the array becomes the **outermost** wrapper. The implementation reverses the array internally before reducing, so the order you supply matches the visual nesting you'd write by hand.
+
+## Parameters
+
+<ParamField path="providers" type="readonly ProviderConfig<any>[]" required>
+  An array of providers to compose. Each entry is either a component or a `[Component, props]` tuple.
+</ParamField>
+
+<ParamField path="displayName" type="string">
+  An optional display name for the composed component. Appears in React DevTools, which helps when debugging nested context trees.
+</ParamField>
+
+## Examples
+
+### Simple providers (no props)
+
+```tsx
+import { composeProviders } from '@/utils/compose-providers'
+import { AuthProvider } from './auth'
+import { ThemeProvider } from './theme'
+import { LocalizationProvider } from './localization'
+
+const AppProviders = composeProviders(
+  [AuthProvider, ThemeProvider, LocalizationProvider],
+  'AppProviders' // optional display name
+)
+
+// Use at your app root
+export default function RootLayout({ children }) {
+  return <AppProviders>{children}</AppProviders>
+}
+```
+
+### Providers with props
+
+Pass a `[Component, props]` tuple for any provider that requires configuration:
+
+```tsx
+import { composeProviders } from '@/utils/compose-providers'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { IntlProvider } from 'react-intl'
+import { BrowserRouter } from 'react-router-dom'
+import { ErrorBoundary } from './error-boundary'
+import { queryClient } from './query-client'
+
+const locale = 'en'
+const messages = { greeting: 'Hello' }
+
+const AppContainer = composeProviders([
+  ErrorBoundary,
+  [QueryClientProvider, { client: queryClient }],
+  [IntlProvider, { locale, messages }],
+  BrowserRouter,
+])
+
+export default function Root() {
+  return (
+    <AppContainer>
+      <App />
+    </AppContainer>
+  )
+}
+```
+
+<Note>
+  Providers that do not require props are passed as plain component references. Providers that do require props use the tuple form `[Provider, props]`. Both can be mixed freely in the same array.
+</Note>
+
+## Benefits
+
+- **Cleaner code** — no more deeply nested provider JSX.
+- **Easier maintenance** — add, remove, or reorder providers in a single array.
+- **Reusable** — import `AppProviders` from one place and use it across tests, Storybook, and your app root.
+- **DevTools-friendly** — set `displayName` so the composed component appears legibly in React DevTools.

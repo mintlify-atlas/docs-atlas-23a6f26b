@@ -1,0 +1,104 @@
+---
+title: "UniqueTextField: Async-Validated Text Input"
+sidebarTitle: "UniqueTextField"
+description: "UniqueTextField extends TextField with support for async validation, useful for checking unique values like usernames or emails against a backend."
+---
+
+`UniqueTextField` builds on a standard text input by adding real-time async availability checking. As the user types, the field debounces input and calls your `checkFunction` to verify uniqueness — for example, querying an API to confirm a username or email is not already taken. The input border turns green when the value is available and red when it is not, and a spinner is shown while checking is in progress.
+
+## Installation
+
+Install all ShaddyForm fields at once with the `shaddy-form` registry item:
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+```
+
+## Usage
+
+```tsx
+"use client"
+import { z } from "zod"
+import { ShaddyForm } from "@/components/form/shaddy-form"
+import { UniqueTextField } from "@/components/form/fields/unique-text-field"
+import { SubmitButton } from "@/components/form/fields/submit-button"
+
+const schema = z.object({
+  username: z.string().min(3, { message: "Username must be at least 3 characters" }),
+})
+
+type FormValues = z.infer<typeof schema>
+
+const initialValues: FormValues = { username: "" }
+
+// Returns true when the value is available, false when it is taken
+async function checkUsername(value: string): Promise<boolean> {
+  const res = await fetch(`/api/check-username?username=${value}`)
+  const data = await res.json()
+  return data.available
+}
+
+export default function Example() {
+  return (
+    <ShaddyForm
+      schema={schema}
+      initialValues={initialValues}
+      onSubmit={(data) => console.log(data)}
+    >
+      <div className="space-y-4 w-72">
+        <UniqueTextField<FormValues>
+          name="username"
+          label="Username"
+          placeholder="Choose a username"
+          required
+          checkFunction={checkUsername}
+          debounceMs={600}
+        />
+        <SubmitButton label="Create Account" />
+      </div>
+    </ShaddyForm>
+  )
+}
+```
+
+## Props
+
+<ParamField path="name" type="Path<T>" required>
+  The field name. Must match a key in your Zod schema passed to `ShaddyForm`.
+</ParamField>
+
+<ParamField path="checkFunction" type="(value: string) => Promise<boolean>" required>
+  An async function that receives the current debounced field value and returns `true` if the value is available/unique or `false` if it is already taken. The field watches its own value via `useFormContext` and calls this function automatically.
+</ParamField>
+
+<ParamField path="label" type="string">
+  Label text rendered above the input. Omit to hide the label.
+</ParamField>
+
+<ParamField path="type" type="'text' | 'email'" default="'text'">
+  The HTML input type. Use `'email'` for email uniqueness checks.
+</ParamField>
+
+<ParamField path="placeholder" type="string">
+  Placeholder text shown inside the input when it is empty.
+</ParamField>
+
+<ParamField path="required" type="boolean" default="false">
+  When `true`, appends a red asterisk to the label as a visual indicator.
+</ParamField>
+
+<ParamField path="debounceMs" type="number" default="1000">
+  Milliseconds to wait after the user stops typing before calling `checkFunction`. Increase this value to reduce API request frequency.
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional Tailwind / CSS classes applied to the outermost `FormItem` wrapper.
+</ParamField>
+
+## Notes
+
+- While `checkFunction` is running, a `Loader2` spinner appears on the right side of the input.
+- When the check resolves `true`, the input border turns green and a checkmark icon is shown.
+- When the check resolves `false`, the input border turns red (no icon is shown for "taken").
+- If `checkFunction` throws, the field silently resets to a neutral state — handle display of API errors through your Zod schema or a separate error state.
+- `UniqueTextField` must be used inside a `<ShaddyForm>` because it reads `control` and `watch` from `useFormContext`.

@@ -1,0 +1,72 @@
+---
+title: "React Design Patterns: Practical Guide"
+sidebarTitle: "Overview"
+description: "Shaddy's React Patterns guide covers proven component composition and state patterns for building scalable, maintainable React applications."
+---
+
+React patterns are reusable solutions to problems that appear repeatedly as applications grow — prop drilling, duplicated stateful logic, overly complex component APIs, and the tension between flexibility and simplicity. Knowing which pattern to reach for, and when not to reach for any of them, is what separates maintainable codebases from ones that become hard to change.
+
+## Why Patterns Matter
+
+Modern React applications routinely face the same structural challenges: components that mix data fetching with rendering, logic that needs to be shared across components without duplicating it, and component APIs that need to be both simple for basic cases and flexible for advanced ones. Patterns give teams a shared vocabulary and a proven structural solution for each of these situations.
+
+<Note>
+  Patterns are tools, not rules. Applying a pattern to a simple component adds overhead without benefit. Use them when the problem they solve is actually present in your code.
+</Note>
+
+## When to Use Patterns
+
+Consider a pattern when you notice one of these signals:
+
+- A component is doing too many things at once (fetching, transforming, and rendering).
+- The same stateful logic appears in two or more components.
+- A component's prop list is growing unwieldy because it tries to cover every configuration.
+- Parent and sibling components need to read or control a child component's state.
+- You're copying component logic into tests because it's too tightly coupled to the UI.
+
+## Patterns
+
+<CardGroup cols={2}>
+  <Card
+    title="Container-Presentation"
+    icon="layout-panel-top"
+    href="/patterns/container-presentation"
+  >
+    Separate data-fetching and business logic (container) from pure UI rendering (presentation) to improve testability and reuse.
+  </Card>
+  <Card
+    title="Hooks Pattern"
+    icon="puzzle"
+    href="/patterns/hooks-pattern"
+  >
+    Extract stateful logic and side effects into custom React hooks for reuse, testability, and cleaner component code.
+  </Card>
+  <Card
+    title="Compound Components"
+    icon="component"
+    href="/patterns/compound-component"
+  >
+    Build flexible component APIs using React Context and multiple sub-components that implicitly share state — like `<Tabs>` and `<Tabs.Panel>`.
+  </Card>
+  <Card
+    title="Render Props"
+    icon="arrow-right-left"
+    href="/patterns/render-props"
+  >
+    Pass a function as a prop to share stateful logic between components while giving callers full control over what is rendered.
+  </Card>
+  <Card
+    title="Function Children"
+    icon="function-square"
+    href="/patterns/function-children"
+  >
+    Use the `children` prop as a function so a component can share its state with whatever the caller chooses to render.
+  </Card>
+  <Card
+    title="Control Props"
+    icon="sliders"
+    href="/patterns/control-props"
+  >
+    Let parent components take full control of a child's state by providing a `value` prop and an `onChange` callback — mirroring how native HTML inputs work.
+  </Card>
+</CardGroup>

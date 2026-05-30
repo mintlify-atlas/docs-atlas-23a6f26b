@@ -1,0 +1,286 @@
+---
+title: "Render Props Pattern in React"
+sidebarTitle: "Render Props"
+description: "The Render Props pattern passes a function as a prop to share stateful logic between components, giving callers full control over what to render."
+---
+
+When two components need the same stateful behaviour but different UI, the most direct solution is to extract the logic into a component that accepts a function prop — a "render prop" — which the component calls with its state, letting the caller decide what to render. The component provides the behaviour; the caller provides the view.
+
+## The Problem
+
+Without a sharing mechanism, logic gets duplicated. Two components that both need to track mouse position end up with identical state and effect code:
+
+```tsx
+// ❌ Duplicated mouse-tracking logic in two components
+function MouseTrackerA() {
+  const [position, setPosition] = useState({ x: 0, y: 0 })
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => setPosition({ x: e.clientX, y: e.clientY })
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [])
+
+  return <div>The mouse is at ({position.x}, {position.y})</div>
+}
+
+function MouseTrackerB() {
+  const [position, setPosition] = useState({ x: 0, y: 0 })
+  // ... same effect, different render
+  return <img src="cursor.png" style={{ left: position.x, top: position.y }} />
+}
+```
+
+## The Solution
+
+Extract the tracking logic into a component with a `render` prop. The component manages state; the prop function decides what to display:
+
+```tsx
+// components/MouseTracker.tsx
+import { useState, useEffect, ReactNode } from 'react'
+
+interface MousePosition {
+  x: number
+  y: number
+}
+
+interface MouseTrackerProps {
+  render: (position: MousePosition) => ReactNode
+}
+
+export function MouseTracker({ render }: MouseTrackerProps) {
+  const [position, setPosition] = useState<MousePosition>({ x: 0, y: 0 })
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setPosition({ x: e.clientX, y: e.clientY })
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [])
+
+  return <>{render(position)}</>
+}
+```
+
+Both consumers now share the same logic without duplication:
+
+```tsx
+import { MouseTracker } from './components/MouseTracker'
+
+export function App() {
+  return (
+    <div className="p-8">
+      {/* Text display */}
+      <MouseTracker
+        render={({ x, y }) => (
+          <p className="mb-4">
+            The mouse is at <strong>({x}, {y})</strong>
+          </p>
+        )}
+      />
+
+      {/* Visual cursor follower */}
+      <MouseTracker
+        render={({ x, y }) => (
+          <div
+            className="fixed w-4 h-4 bg-blue-500 rounded-full pointer-events-none"
+            style={{ left: x - 8, top: y - 8 }}
+          />
+        )}
+      />
+    </div>
+  )
+}
+```
+
+## Realistic Example: Generic Data Fetcher
+
+A data-fetching component that exposes loading, error, and refetch state to callers:
+
+```tsx
+// components/DataFetcher.tsx
+import { useState, useEffect, ReactNode } from 'react'
+
+interface FetchState<T> {
+  data: T | null
+  loading: boolean
+  error: Error | null
+  refetch: () => void
+}
+
+interface DataFetcherProps<T> {
+  url: string
+  children: (state: FetchState<T>) => ReactNode
+  options?: RequestInit
+}
+
+export function DataFetcher<T>({ url, children, options }: DataFetcherProps<T>) {
+  const [data, setData] = useState<T | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+  const [refetchTrigger, setRefetchTrigger] = useState(0)
+
+  const refetch = () => setRefetchTrigger((prev) => prev + 1)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await fetch(url, options)
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        const json = await response.json()
+        if (!cancelled) setData(json)
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err : new Error('An error occurred'))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    fetchData()
+    return () => { cancelled = true }
+  }, [url, refetchTrigger])
+
+  return <>{children({ data, loading, error, refetch })}</>
+}
+```
+
+Using `DataFetcher` with `children` as the render prop:
+
+```tsx
+import { DataFetcher } from './components/DataFetcher'
+
+interface User {
+  id: number
+  name: string
+  email: string
+  avatar: string
+}
+
+export function UserProfile({ userId }: { userId: number }) {
+  return (
+    <DataFetcher<User> url={`/api/users/${userId}`}>
+      {({ data, loading, error, refetch }) => {
+        if (loading) {
+          return (
+            <div className="flex items-center justify-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+            </div>
+          )
+        }
+
+        if (error) {
+          return (
+            <div className="p-4 bg-red-50 border border-red-200 rounded">
+              <p className="text-red-800">Error: {error.message}</p>
+              <button onClick={refetch} className="mt-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+                Retry
+              </button>
+            </div>
+          )
+        }
+
+        if (!data) return <p>No user found</p>
+
+        return (
+          <div className="bg-white shadow rounded-lg p-6">
+            <div className="flex items-center gap-4">
+              <img src={data.avatar} alt={data.name} className="w-16 h-16 rounded-full" />
+              <div>
+                <h2 className="text-xl font-bold">{data.name}</h2>
+                <p className="text-gray-600">{data.email}</p>
+              </div>
+            </div>
+            <button onClick={refetch} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+              Refresh
+            </button>
+          </div>
+        )
+      }}
+    </DataFetcher>
+  )
+}
+```
+
+## Render Props vs Custom Hooks
+
+Modern React prefers custom hooks for sharing logic, but render props remain relevant when the shared component needs to control what renders or when you're building a library with a declarative JSX API.
+
+```tsx
+// Render Props approach
+<MouseTracker>
+  {({ x, y }) => <div>Mouse at ({x}, {y})</div>}
+</MouseTracker>
+
+// Custom Hook approach
+function useMousePosition() {
+  const [position, setPosition] = useState({ x: 0, y: 0 })
+  useEffect(() => {
+    const handler = (e: MouseEvent) => setPosition({ x: e.clientX, y: e.clientY })
+    window.addEventListener('mousemove', handler)
+    return () => window.removeEventListener('mousemove', handler)
+  }, [])
+  return position
+}
+
+function App() {
+  const { x, y } = useMousePosition()
+  return <div>Mouse at ({x}, {y})</div>
+}
+```
+
+| | Render Props | Custom Hook |
+|---|---|---|
+| **Control over rendering** | ✅ Caller decides what renders | ❌ Hook returns data only |
+| **JSX composability** | ✅ Fits naturally in component trees | — |
+| **Simplicity** | More nesting in JSX | Cleaner component bodies |
+| **Best for** | Component libraries, declarative APIs | Application-level logic sharing |
+
+## Pattern Variations
+
+**Named render prop:**
+
+```tsx
+<DataFetcher url="/api/users" render={({ data, loading }) => <UserList users={data} />} />
+```
+
+**Children as function (most common):**
+
+```tsx
+<DataFetcher url="/api/users">
+  {({ data, loading }) => <UserList users={data} />}
+</DataFetcher>
+```
+
+**Multiple render props (slots):**
+
+```tsx
+<Component
+  renderHeader={(data) => <Header {...data} />}
+  renderBody={(data) => <Body {...data} />}
+  renderFooter={(data) => <Footer {...data} />}
+/>
+```
+
+## When to Use
+
+- Multiple components need the same stateful logic but render different UI.
+- You want callers to have complete rendering control based on shared state.
+- You're building a reusable utility component (data fetching, event tracking, etc.).
+- You want to avoid HOC wrapper components in the tree.
+- Type safety and explicit prop contracts are important.
+
+## When Not to Use
+
+- The logic is simple enough for a custom hook — hooks are usually cleaner.
+- The component doesn't manage any state worth sharing.
+- The render function grows complex enough to create "callback hell" from nesting.
+- Performance is critical and creating new inline functions on each render is a concern.
+
+<Tip>
+  Use `useCallback` to stabilise render prop functions when the component they target uses `React.memo`, preventing unnecessary re-renders caused by new function references on each parent render.
+</Tip>

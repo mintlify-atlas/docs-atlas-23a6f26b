@@ -1,0 +1,183 @@
+---
+title: "useDebouncedCallback: Debounced Callback Hook for React"
+sidebarTitle: "useDebouncedCallback"
+description: "Debounce any callback function in React with leading-edge, trailing-edge, and maxWait options, plus cancel, flush, and isPending control methods."
+---
+
+`useDebouncedCallback` is a React hook that wraps any callback function and returns a debounced version of it. Unlike `useDebounce` — which debounces a reactive value — this hook debounces the function call itself, making it ideal for event handlers like `onChange`, `onScroll`, or `onInput` where you want to delay or throttle execution without managing timers manually. The returned function also exposes `cancel`, `flush`, and `isPending` control methods for fine-grained timing control.
+
+## Installation
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/use-debounced-callback
+```
+
+## Signature
+
+```typescript
+type DebounceOptions = {
+  leading?:  boolean   // Execute immediately on the first call. Default: false
+  trailing?: boolean   // Execute after the delay when calls stop. Default: true
+  maxWait?:  number    // Maximum milliseconds to wait before forcing execution
+}
+
+type ControlFunctions = {
+  cancel:    () => void     // Cancel any pending execution
+  flush:     () => void     // Immediately execute any pending callback
+  isPending: () => boolean  // Check whether an execution is pending
+}
+
+type DebouncedFunction<T extends (...args: any[]) => any> =
+  ((...args: Parameters<T>) => ReturnType<T> | undefined) & ControlFunctions
+
+const useDebouncedCallback = <T extends (...args: any[]) => any>(
+  callback: T,
+  delay?:   number,          // Default: 300
+  options?: DebounceOptions
+): DebouncedFunction<T>
+```
+
+## Parameters
+
+<ParamField path="callback" type="T extends (...args: any[]) => any" required>
+  The function to debounce. The hook keeps an up-to-date ref of the callback internally, so you can safely pass an inline arrow function without causing the debounce timer to reset on every render.
+</ParamField>
+
+<ParamField path="delay" type="number">
+  The quiet period in milliseconds. The callback executes only after this many milliseconds have passed since the last invocation. Defaults to `300`. Values below `0` are clamped to `0`.
+</ParamField>
+
+<ParamField path="options" type="DebounceOptions">
+  Optional configuration object.
+
+  <Expandable title="DebounceOptions">
+    <ParamField path="leading" type="boolean">
+      When `true` the callback executes immediately on the **first** call of a debounce sequence, before the delay timer starts. Useful for instant feedback on the first interaction. Default: `false`.
+    </ParamField>
+    <ParamField path="trailing" type="boolean">
+      When `true` the callback executes after the delay has elapsed and calls have stopped. This is the standard debounce behaviour. Default: `true`.
+    </ParamField>
+    <ParamField path="maxWait" type="number">
+      The maximum number of milliseconds to wait before forcing the callback to execute, even if calls are still coming in. Useful for implementing throttle-like behaviour alongside debouncing.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Return Value
+
+<ResponseField name="debouncedFn" type="DebouncedFunction<T>">
+  The debounced version of `callback`. It accepts the same arguments as the original function. In addition to being callable, it exposes three control methods:
+
+  <Expandable title="Control methods">
+    <ResponseField name="cancel" type="() => void">
+      Cancels any pending delayed execution and discards the stored arguments.
+    </ResponseField>
+    <ResponseField name="flush" type="() => void">
+      Immediately executes any pending delayed callback (clears the timer first).
+    </ResponseField>
+    <ResponseField name="isPending" type="() => boolean">
+      Returns `true` when a delayed execution is scheduled and has not yet run.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Usage
+
+### Debounced Search Handler
+
+```tsx
+import { useState } from "react"
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback"
+
+export function SearchBox() {
+  const [results, setResults] = useState<string[]>([])
+
+  const debouncedSearch = useDebouncedCallback(
+    async (query: string) => {
+      const data = await fetch(`/api/search?q=${query}`).then((r) => r.json())
+      setResults(data)
+    },
+    500
+  )
+
+  return (
+    <div>
+      <input
+        type="text"
+        placeholder="Search…"
+        onChange={(e) => debouncedSearch(e.target.value)}
+      />
+      <ul>
+        {results.map((r) => (
+          <li key={r}>{r}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+### Using Control Methods
+
+```tsx
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback"
+
+export function AutoSaveForm() {
+  const debouncedSave = useDebouncedCallback(
+    (content: string) => {
+      console.log("Saving:", content)
+    },
+    1000,
+    { leading: false, trailing: true }
+  )
+
+  const handleSaveNow = () => {
+    // Force save immediately without waiting for the delay
+    debouncedSave.flush()
+  }
+
+  const handleDiscard = () => {
+    // Cancel any pending save
+    debouncedSave.cancel()
+  }
+
+  return (
+    <div>
+      <textarea onChange={(e) => debouncedSave(e.target.value)} />
+      <button onClick={handleSaveNow}>Save Now</button>
+      <button onClick={handleDiscard}>Discard Changes</button>
+    </div>
+  )
+}
+```
+
+### With `maxWait` (Throttle-like Behaviour)
+
+```tsx
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback"
+
+export function ScrollTracker() {
+  // Execute at most every 2 seconds, even during continuous scrolling
+  const debouncedTrack = useDebouncedCallback(
+    () => {
+      console.log("Scroll position:", window.scrollY)
+    },
+    500,
+    { maxWait: 2000 }
+  )
+
+  useEffect(() => {
+    window.addEventListener("scroll", debouncedTrack)
+    return () => window.removeEventListener("scroll", debouncedTrack)
+  }, [debouncedTrack])
+
+  return <div style={{ height: "200vh" }}>Scroll me</div>
+}
+```
+
+## Notes
+
+- The hook stores the latest `callback` in a ref, so changing the callback between renders never resets the debounce timer. The most recent version is always called.
+- The debounced function and its control methods are built with `useMemo` and are stable across renders when `delay` and `options` do not change.
+- On component unmount, any pending timer is automatically cleared to prevent calling callbacks on unmounted components.
+- If you only need to debounce a **value** rather than a function, use [`useDebounce`](/hooks/use-debounce) instead.

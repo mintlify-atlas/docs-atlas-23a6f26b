@@ -1,0 +1,127 @@
+---
+title: "TextAreaField: Multiline Text Input for ShaddyForm"
+sidebarTitle: "TextAreaField"
+description: "TextAreaField renders a labeled multiline textarea integrated with ShaddyForm context, with configurable rows and automatic validation message display."
+---
+
+`TextAreaField` wraps shadcn/ui's `Textarea` (or an auto-resizing variant) inside `ShaddyForm`'s form context, providing a fully integrated multiline text input. It supports the same icon, action-button, and loading-spinner patterns as `TextField`, plus two textarea-specific options: `resizable` to control manual resizing and `autoResize` to make the textarea grow with its content.
+
+## Installation
+
+Install all ShaddyForm fields at once with the `shaddy-form` registry item:
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+```
+
+## Usage
+
+```tsx
+"use client"
+import { z } from "zod"
+import { ShaddyForm } from "@/components/form/shaddy-form"
+import { TextAreaField } from "@/components/form/fields/text-area-field"
+import { SubmitButton } from "@/components/form/fields/submit-button"
+
+const schema = z.object({
+  bio: z.string().min(10, { message: "Bio must be at least 10 characters" }),
+  notes: z.string().optional(),
+})
+
+type FormValues = z.infer<typeof schema>
+
+const initialValues: FormValues = { bio: "", notes: "" }
+
+export default function Example() {
+  return (
+    <ShaddyForm
+      schema={schema}
+      initialValues={initialValues}
+      onSubmit={(data) => console.log(data)}
+    >
+      <div className="space-y-4 w-96">
+        <TextAreaField<FormValues>
+          name="bio"
+          label="Bio"
+          placeholder="Tell us about yourself"
+          required
+          autoResize
+          minHeight={80}
+          maxHeight={240}
+        />
+        <TextAreaField<FormValues>
+          name="notes"
+          label="Notes"
+          placeholder="Any additional notes"
+          resizable
+        />
+        <SubmitButton label="Save" />
+      </div>
+    </ShaddyForm>
+  )
+}
+```
+
+## Props
+
+<ParamField path="name" type="Path<T>" required>
+  The field name. Must match a key in your Zod schema passed to `ShaddyForm`.
+</ParamField>
+
+<ParamField path="label" type="string">
+  Label text rendered above the textarea. Omit to hide the label.
+</ParamField>
+
+<ParamField path="placeholder" type="string">
+  Placeholder text shown inside the textarea when it is empty.
+</ParamField>
+
+<ParamField path="required" type="boolean" default="false">
+  When `true`, appends a red asterisk to the label as a visual indicator.
+</ParamField>
+
+<ParamField path="resizable" type="boolean" default="false">
+  When `true`, the user can manually resize the textarea by dragging its bottom-right corner. Defaults to `false` (resize is disabled via `resize-none`).
+</ParamField>
+
+<ParamField path="autoResize" type="boolean" default="false">
+  When `true`, switches to the `AutosizeTextarea` component which automatically expands the textarea height as the user types. Use `minHeight` and `maxHeight` to constrain the range.
+</ParamField>
+
+<ParamField path="minHeight" type="number">
+  Minimum height in pixels for the auto-resizing textarea. Only applies when `autoResize` is `true`.
+</ParamField>
+
+<ParamField path="maxHeight" type="number">
+  Maximum height in pixels for the auto-resizing textarea. Once reached, the textarea becomes scrollable. Only applies when `autoResize` is `true`.
+</ParamField>
+
+<ParamField path="action" type="() => void">
+  Callback fired when the action button on the right is clicked. When provided, a ghost button appears in the top-right corner of the textarea using the `Icon` prop (or a default ✕ icon).
+</ParamField>
+
+<ParamField path="Icon" type="ReactNode">
+  An icon node used as the content of the action button (when `action` is set) or rendered as a static overlay icon otherwise.
+</ParamField>
+
+<ParamField path="loading" type="boolean">
+  When `true`, shows an animated `LoadingSpinner` on the right side of the textarea.
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes applied to the outermost `FormItem` wrapper.
+</ParamField>
+
+<ParamField path="inputClassName" type="string">
+  Additional CSS classes applied directly to the `<Textarea>` element.
+</ParamField>
+
+<ParamField path="iconClassName" type="string">
+  Additional CSS classes applied to the icon container or action button.
+</ParamField>
+
+## Notes
+
+- `TextAreaField` must be rendered inside a `<ShaddyForm>` — it reads `control` from `useFormContext` internally.
+- `autoResize` and `resizable` can be combined but `autoResize` takes precedence over the textarea component used.
+- Validation messages are rendered automatically below the textarea via shadcn/ui's `<FormMessage>`.

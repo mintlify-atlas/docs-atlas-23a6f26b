@@ -1,0 +1,165 @@
+---
+title: "What Are Fields in Shaddy Form?"
+sidebarTitle: "What Are Fields"
+description: "Fields are pre-built form input components that integrate with ShaddyForm's context, providing automatic validation, labels, and error messages."
+---
+
+Building forms involves more than just rendering an `<input>` element — every field needs a label, validation feedback, accessible structure, and a connection to the form's state manager. Fields in Shaddy Form encapsulate all of that into a single, reusable component.
+
+## What Is a Field?
+
+A **Field** is a self-contained form control that wraps a UI input and integrates automatically with `ShaddyForm`'s context. Rather than wiring up `FormField`, `FormItem`, `FormLabel`, `FormControl`, and `FormMessage` by hand for every input, a Field component does all of that internally.
+
+Fields follow a consistent naming convention — the `Field` suffix — so they are easy to identify and locate in your codebase (e.g., `TextField`, `PasswordField`, `TextAreaField`).
+
+## Field vs Raw Input
+
+| | Raw `<input>` | Shaddy Field |
+|---|---|---|
+| Connected to `react-hook-form` | Manual `register` or `Controller` | Automatic via `useFormContext` |
+| Label rendering | Manual | Built-in via `label` prop |
+| Validation errors | Manual `formState.errors` lookup | Built-in `FormMessage` |
+| Accessible structure | Manual | Built-in `FormItem` / `FormControl` |
+| Reusable across forms | Copy-paste | Drop-in component |
+
+## How Fields Connect to the Form
+
+Every Field component calls `useFormContext()` internally to retrieve the `control` object from the nearest `ShaddyForm`. This means fields work anywhere inside a `<ShaddyForm>` without receiving any form-specific props — just the field's own `name`, `label`, and any input-specific options.
+
+```tsx
+// Inside a field component (simplified)
+const { control } = useFormContext<T>();
+
+return (
+  <FormField
+    control={control}
+    name={name}
+    render={({ field }) => (
+      <FormItem>
+        <FormLabel>{label}</FormLabel>
+        <FormControl>
+          <Input {...field} />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    )}
+  />
+);
+```
+
+<Note>
+  Fields must be rendered as descendants of a `ShaddyForm`. Using a field outside of `ShaddyForm` will throw an error because there is no form context to connect to.
+</Note>
+
+## Available Built-in Fields
+
+Shaddy Form ships with a set of ready-to-use field components, all built on `shadcn/ui` primitives:
+
+- **`TextField`** — Standard text input for any string value, supports `type` prop for `email`, `number`, `url`, etc.
+- **`PasswordField`** — Extends `TextField` with a show/hide password toggle.
+- **`TextAreaField`** — Multi-line text input for longer content.
+- **`SubmitButton`** — Submits the form with loading and disabled state support.
+- **`ResetButton`** — Resets the form to its `initialValues`.
+
+## Why Fields Are Separated by Responsibility
+
+Fields are intentionally **modular and purpose-driven**. For example:
+
+- `TextField` handles all single-line text input, but `PasswordField` extends it with additional UI for toggling password visibility.
+- `SubmitButton` and `ResetButton` are both buttons, but they are separated so each has a single, explicit responsibility — submitting or resetting — without conditionals or ambiguity.
+
+This separation keeps forms **highly maintainable**: each component does one thing and can be enhanced independently.
+
+## Creating a Custom Field
+
+If you need a field type that does not exist yet — a date picker, a select menu, a file uploader — you can build one following the same pattern as all built-in fields.
+
+<Steps>
+  <Step title="Define your props type">
+    Use `FieldValues` and `Path<T>` from `react-hook-form` to make the component generic and type-safe.
+  </Step>
+  <Step title="Read control from useFormContext">
+    Call `useFormContext<T>()` inside the component to obtain the `control` object.
+  </Step>
+  <Step title="Wrap your input with FormField">
+    Use the `shadcn/ui` `FormField`, `FormItem`, `FormControl`, `FormLabel`, and `FormMessage` structure.
+  </Step>
+</Steps>
+
+Here is a complete example of a custom `PasswordField`:
+
+```tsx
+import { cn } from "@/lib/utils";
+import { Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
+import { FieldValues, Path, useFormContext } from "react-hook-form";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+
+type PasswordFieldProps<T extends FieldValues> = {
+  name: Path<T>;
+  label?: string;
+  required?: boolean;
+  className?: string;
+};
+
+export const PasswordField = <T extends FieldValues>({
+  name,
+  label,
+  required,
+  className,
+}: PasswordFieldProps<T>) => {
+  const { control } = useFormContext<T>();
+  const [show, setShow] = useState(false);
+
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormItem className={cn(className)}>
+          {label && (
+            <FormLabel>
+              {label}
+              {required && <span className="text-red-500 ml-1">*</span>}
+            </FormLabel>
+          )}
+          <FormControl>
+            <div className="relative">
+              <Input type={show ? "text" : "password"} {...field} />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+                onClick={() => setShow((s) => !s)}
+              >
+                {show ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+};
+```
+
+Once created, drop it into any `ShaddyForm` exactly like a built-in field:
+
+```tsx
+<ShaddyForm schema={loginSchema} initialValues={initialValues} onSubmit={handleSubmit}>
+  <TextField<LoginValues> name="email" label="Email" required />
+  <PasswordField<LoginValues> name="password" label="Password" required />
+  <SubmitButton label="Sign In" />
+</ShaddyForm>
+```
+
+<Note>
+  Validation logic lives in the Zod schema, not in the field component. Field components are responsible only for rendering and UI interactions — this keeps them lean and reusable.
+</Note>

@@ -1,0 +1,216 @@
+---
+title: "ShaddyForm Component API Reference"
+sidebarTitle: "ShaddyForm"
+description: "ShaddyForm is a generic React form component wrapping react-hook-form and Zod. Pass a schema, initialValues, and onSubmit to get a fully managed form."
+---
+
+`ShaddyForm` is the core component of the Shaddy Form system. It initializes a `react-hook-form` instance, applies a Zod resolver for schema-based validation, provides the form context to all descendant Field components, and renders a standard `<form>` element that calls your `onSubmit` handler only after all validations pass.
+
+## Installation
+
+<Steps>
+  <Step title="Install via CLI">
+    ```bash
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+    ```
+  </Step>
+  <Step title="Or install manually">
+    Install the required dependencies:
+
+    ```bash
+    npm install react-hook-form zod @hookform/resolvers
+    ```
+
+    Then copy the component source into your project and update import paths to match your setup.
+  </Step>
+</Steps>
+
+## TypeScript Types
+
+`ShaddyForm` is built around two exported types.
+
+### `ShaddyFormProps<TSchema>`
+
+```tsx
+export type ShaddyFormProps<TSchema extends FieldValues = FieldValues> = {
+  schema: ZodType<TSchema, any>;
+  initialValues: DefaultValues<TSchema>;
+  onSubmit: SubmitHandler<TSchema>;
+  children: ReactNode;
+  mode?: "onChange" | "onBlur" | "onSubmit" | "all";
+} & Omit<React.ComponentPropsWithoutRef<"form">, "onSubmit">;
+```
+
+All standard HTML `<form>` attributes (such as `className`, `id`, `style`) are accepted and forwarded to the underlying `<form>` element. The native `onSubmit` is omitted and replaced by the typed `onSubmit` prop.
+
+### `ShaddyFormRef<T>`
+
+```tsx
+export type ShaddyFormRef<T extends FieldValues = FieldValues> = {
+  form: UseFormReturn<T, any, T>;
+};
+```
+
+When you attach a `ref` to `ShaddyForm`, the ref handle exposes the full `UseFormReturn` object — giving you access to `getValues`, `setValue`, `trigger`, `reset`, `formState`, and every other method from `react-hook-form`.
+
+## Props
+
+<ParamField path="schema" type="ZodType<TSchema>" required>
+  A Zod schema that defines the shape and validation rules of the form. The schema's inferred type becomes the generic type `TSchema` used throughout the form — in `initialValues`, the `onSubmit` callback, and all Field component `name` props.
+</ParamField>
+
+<ParamField path="initialValues" type="DefaultValues<TSchema>" required>
+  The starting values for every field in the form. The type is inferred from `TSchema`, so TypeScript will catch any missing or mistyped keys at compile time.
+</ParamField>
+
+<ParamField path="onSubmit" type="SubmitHandler<TSchema>" required>
+  A callback invoked only after all Zod validations pass. Receives the validated form data typed as `TSchema`. Any async logic (API calls, navigation) can be performed here.
+</ParamField>
+
+<ParamField path="children" type="ReactNode" required>
+  The content of the form. Typically a layout containing Field components (e.g., `TextField`, `PasswordField`) and action buttons (`SubmitButton`, `ResetButton`). All children have access to the form context automatically.
+</ParamField>
+
+<ParamField path="mode" type='"onChange" | "onBlur" | "onSubmit" | "all"' default='"onChange"'>
+  Controls when `react-hook-form` runs field validation:
+  - `"onChange"` — validates as the user types (default).
+  - `"onBlur"` — validates when the field loses focus.
+  - `"onSubmit"` — validates only when the form is submitted.
+  - `"all"` — validates on all events.
+</ParamField>
+
+<ParamField path="ref" type="React.Ref<ShaddyFormRef<TSchema>>">
+  An optional ref for accessing the `react-hook-form` instance (`UseFormReturn`) from outside the component tree. Useful for multi-step forms or components that need to programmatically read, set, or trigger validation on form fields.
+</ParamField>
+
+<ParamField path="...props" type="React.ComponentPropsWithoutRef<'form'>">
+  All other standard HTML `<form>` attributes (`className`, `id`, `style`, `aria-*`, etc.) are forwarded directly to the underlying `<form>` element.
+</ParamField>
+
+## Basic Usage
+
+```tsx
+import z from "zod";
+import { ShaddyForm } from "@/components/form/shaddy-form";
+import { TextField } from "@/components/form/fields/text-field";
+import { SubmitButton } from "@/components/form/fields/submit-button";
+
+const userSchema = z.object({
+  name: z.string().min(1, { message: "Name is required" }),
+  email: z.string().email({ message: "Invalid email address" }),
+});
+
+type User = z.infer<typeof userSchema>;
+
+const initialValues: User = {
+  name: "",
+  email: "",
+};
+
+export function UserForm() {
+  return (
+    <ShaddyForm<User>
+      schema={userSchema}
+      initialValues={initialValues}
+      onSubmit={(data) => {
+        // `data` is typed as User — validated and safe to use
+        console.log(data.name, data.email);
+      }}
+      className="space-y-4 w-80"
+    >
+      <TextField<User>
+        name="name"
+        label="Full Name"
+        placeholder="Enter your name"
+      />
+      <TextField<User>
+        name="email"
+        label="Email Address"
+        required
+        placeholder="you@example.com"
+      />
+      <SubmitButton label="Save" />
+    </ShaddyForm>
+  );
+}
+```
+
+## Using the `ref` to Access the Form Externally
+
+For advanced scenarios — such as multi-step forms, external reset buttons, or reading form values from a parent component — attach a `ref` to `ShaddyForm` to obtain the `UseFormReturn` instance.
+
+```tsx
+import { useRef } from "react";
+import { ShaddyForm, ShaddyFormRef } from "@/components/form/shaddy-form";
+import z from "zod";
+
+const schema = z.object({
+  username: z.string().min(3),
+});
+
+type FormValues = z.infer<typeof schema>;
+
+export function ControlledForm() {
+  const formRef = useRef<ShaddyFormRef<FormValues>>(null);
+
+  const handleInspect = () => {
+    const form = formRef.current?.form;
+    if (!form) return;
+
+    console.log("Current values:", form.getValues());
+    console.log("Is valid:", form.formState.isValid);
+  };
+
+  const handleReset = () => {
+    formRef.current?.form.reset();
+  };
+
+  return (
+    <>
+      <ShaddyForm<FormValues>
+        ref={formRef}
+        schema={schema}
+        initialValues={{ username: "" }}
+        onSubmit={(data) => console.log("Submitted:", data)}
+      >
+        <TextField<FormValues>
+          name="username"
+          label="Username"
+          placeholder="Enter a username"
+        />
+        <SubmitButton label="Save" />
+      </ShaddyForm>
+
+      {/* Buttons outside the form that still control it */}
+      <button type="button" onClick={handleInspect}>Inspect Values</button>
+      <button type="button" onClick={handleReset}>Reset Externally</button>
+    </>
+  );
+}
+```
+
+<Note>
+  The `ref` exposes the complete `react-hook-form` `UseFormReturn` API. This includes `setValue`, `setError`, `clearErrors`, `trigger`, `watch`, `getValues`, `reset`, and the full `formState` object.
+</Note>
+
+## Validation Modes
+
+Choose the `mode` that best fits your user experience:
+
+| Mode | When validation runs |
+|---|---|
+| `"onChange"` (default) | On every keystroke — immediate feedback |
+| `"onBlur"` | When a field loses focus — less disruptive |
+| `"onSubmit"` | Only when the user attempts to submit |
+| `"all"` | On every event — maximum feedback |
+
+```tsx
+<ShaddyForm
+  schema={schema}
+  initialValues={initialValues}
+  onSubmit={handleSubmit}
+  mode="onBlur"
+>
+  {/* fields */}
+</ShaddyForm>
+```

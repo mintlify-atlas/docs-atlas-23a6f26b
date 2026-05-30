@@ -1,0 +1,147 @@
+---
+title: "useInterval: Interval Hook for React"
+sidebarTitle: "useInterval"
+description: "Run a callback on a recurring interval in React with start, stop, reset, and isRunning controls — pause by passing null and clean up automatically on unmount."
+---
+
+`useInterval` is a React hook that sets up a recurring interval and executes a callback at the given delay, while also exposing `start`, `stop`, `reset`, and `isRunning` controls so you can manage the interval lifecycle imperatively. Passing `null` as the delay pauses the interval without unmounting the component, and the hook automatically clears the interval when the component unmounts — no manual `clearInterval` needed. It is ideal for countdowns, polling, animations, and any feature that needs repeating behaviour with runtime control.
+
+## Installation
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/use-interval
+```
+
+## Signature
+
+```typescript
+type Callback = () => void
+type Delay    = number | null
+
+type UseInterval = (
+  callback: Callback,
+  delay: Delay,
+  options?: { autoStart?: boolean }
+) => {
+  stop:      () => void
+  start:     () => void
+  reset:     () => void
+  isRunning: boolean
+}
+```
+
+## Parameters
+
+<ParamField path="callback" type="() => void" required>
+  The function to execute on each interval tick. The hook stores the latest version in a ref, so you can safely use an inline function or a callback that closes over state — it will always call the most recent version without resetting the timer.
+</ParamField>
+
+<ParamField path="delay" type="number | null" required>
+  The interval period in milliseconds. Pass `null` to pause the interval; the state and controls are preserved and you can resume with `start()`. Pass `0` for the fastest possible interval (one event-loop tick).
+</ParamField>
+
+<ParamField path="options" type="{ autoStart?: boolean }">
+  Optional configuration.
+
+  <Expandable title="options">
+    <ParamField path="autoStart" type="boolean">
+      When `true` (the default), the interval starts automatically as soon as the component mounts and `delay` is not `null`. Set to `false` to start it manually with `start()`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Return Value
+
+<ResponseField name="stop" type="() => void">
+  Clears the interval and sets `isRunning` to `false`. Calling `stop` when the interval is already stopped has no effect.
+</ResponseField>
+
+<ResponseField name="start" type="() => void">
+  Starts (or restarts) the interval. Has no effect when `delay` is `null` or the interval is already running.
+</ResponseField>
+
+<ResponseField name="reset" type="() => void">
+  Clears the current interval and immediately starts a fresh one (if `autoStart` is `true` and `delay` is not `null`). Useful for restarting a countdown from zero.
+</ResponseField>
+
+<ResponseField name="isRunning" type="boolean">
+  Reactive boolean that is `true` while the interval is active and `false` when it has been stopped or paused.
+</ResponseField>
+
+## Usage
+
+### Countdown Timer
+
+```tsx
+import { useState } from "react"
+import { useInterval } from "@/hooks/use-interval"
+
+export function Countdown() {
+  const [seconds, setSeconds] = useState(10)
+
+  const { stop, start, reset, isRunning } = useInterval(
+    () => {
+      setSeconds((prev) => {
+        if (prev <= 1) {
+          stop()
+          return 0
+        }
+        return prev - 1
+      })
+    },
+    1000
+  )
+
+  const handleReset = () => {
+    setSeconds(10)
+    reset()
+  }
+
+  return (
+    <div>
+      <p>Time remaining: {seconds}s</p>
+      <p>Status: {isRunning ? "Running" : "Stopped"}</p>
+
+      <button onClick={stop} disabled={!isRunning}>Pause</button>
+      <button onClick={start} disabled={isRunning || seconds === 0}>Resume</button>
+      <button onClick={handleReset}>Restart</button>
+    </div>
+  )
+}
+```
+
+### Polling with Manual Start
+
+```tsx
+import { useState } from "react"
+import { useInterval } from "@/hooks/use-interval"
+
+export function DataPoller() {
+  const [data, setData] = useState<string | null>(null)
+
+  const { start, stop, isRunning } = useInterval(
+    async () => {
+      const res = await fetch("/api/status")
+      const json = await res.json()
+      setData(json.status)
+    },
+    5000,
+    { autoStart: false } // Start polling only when the user clicks
+  )
+
+  return (
+    <div>
+      <p>Status: {data ?? "Not polling"}</p>
+      <button onClick={start} disabled={isRunning}>Start Polling</button>
+      <button onClick={stop} disabled={!isRunning}>Stop Polling</button>
+    </div>
+  )
+}
+```
+
+## Notes
+
+- The `callback` ref is updated on every render, so you never need to include `callback` in the hook's dependency array — the latest version is always used.
+- Passing `null` to `delay` is the idiomatic way to pause the interval. The hook calls `clearInterval` immediately and `isRunning` becomes `false`.
+- The interval is automatically cleaned up when the component unmounts, preventing memory leaks and calls to callbacks on unmounted components.
+- `reset` stops then conditionally restarts the interval based on the `autoStart` option. If `autoStart` is `false`, `reset` only stops the interval.

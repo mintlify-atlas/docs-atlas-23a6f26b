@@ -1,0 +1,148 @@
+---
+title: "Shaddy Form: Schema-Driven Forms for React"
+sidebarTitle: "Overview"
+description: "Shaddy Form generates React forms automatically from a Zod schema and submit handler, eliminating boilerplate using react-hook-form and shadcn/ui."
+---
+
+Forms are a constant in React applications — from login and registration to complex admin dashboards, nearly every page interacts with user data in some way. The challenge is not just writing forms once, but managing them consistently across large codebases, teams, and projects without accumulating repetitive, hard-to-maintain boilerplate.
+
+## The Problem with Manual Form Management
+
+Libraries like `react-hook-form` are excellent for managing form state, and `shadcn/ui`'s `Form` component reduces some repetition with render props. But as forms multiply across a project, the same patterns — schema validation, field registration, error display, submit handling — get copy-pasted and drift apart over time.
+
+Shaddy Form takes the approach that **a form should be fully described by its schema and submit handler**. Everything else — state management, validation, error display, and layout wiring — is handled automatically.
+
+## How ShaddyForm Works
+
+`ShaddyForm` is a generic React component that wraps `react-hook-form` and `Zod`. You provide three things:
+
+1. A **Zod schema** that defines the shape and validation rules of your form data.
+2. **Initial values** that match the schema's inferred type.
+3. An **`onSubmit` handler** that receives fully validated, type-safe data.
+
+Inside `ShaddyForm` you place **Field components** — pre-built inputs like `TextField`, `PasswordField`, and `TextAreaField` — that automatically connect to the form's context with no extra wiring.
+
+```
+Zod schema + initialValues + onSubmit → ShaddyForm → Field components
+```
+
+## Dependency Stack
+
+| Library | Role |
+|---|---|
+| `react-hook-form` | Form state, validation triggers, field registration |
+| `zod` + `@hookform/resolvers/zod` | Schema-based validation with full TypeScript inference |
+| `shadcn/ui` Form | Accessible form primitives (`FormField`, `FormItem`, `FormMessage`) |
+
+## Installation
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+```
+
+## Quick Start Example
+
+Below is a complete form with two fields and a submit button — no `useForm`, no `Controller`, no `FormField` boilerplate required.
+
+```tsx
+import z from "zod";
+import { ShaddyForm } from "@/components/form/shaddy-form";
+import { TextField } from "@/components/form/fields/text-field";
+import { SubmitButton } from "@/components/form/fields/submit-button";
+
+const userSchema = z.object({
+  name: z.string().min(1, { message: "Name is required" }),
+  email: z.string().email({ message: "Invalid email address" }),
+});
+
+type User = z.infer<typeof userSchema>;
+
+const initialValues: User = {
+  name: "",
+  email: "",
+};
+
+export function UserForm() {
+  return (
+    <ShaddyForm
+      schema={userSchema}
+      initialValues={initialValues}
+      onSubmit={(data) => {
+        // `data` is fully typed as User
+        console.log("Submitted:", data);
+      }}
+    >
+      <div className="space-y-4 w-80">
+        <TextField<User>
+          name="name"
+          label="Name"
+          placeholder="Enter your name"
+        />
+        <TextField<User>
+          name="email"
+          label="Email"
+          required
+          placeholder="Enter your email"
+        />
+        <SubmitButton label="Submit" />
+      </div>
+    </ShaddyForm>
+  );
+}
+```
+
+<Note>
+  The `onSubmit` callback only fires after all Zod validations pass. You never need to manually check `isValid` before processing submission data.
+</Note>
+
+## Features
+
+- **Schema-driven validation** — define once in Zod, enforce everywhere automatically.
+- **Zero boilerplate** — no manual `useForm`, `Controller`, or `FormField` setup per field.
+- **Type-safe throughout** — generics flow from your schema to every field and the submit handler.
+- **Reusable Field components** — built on `shadcn/ui`, each field handles its own label, input, and error message.
+- **Custom fields** — extend the pattern with your own components using `useFormContext`.
+- **Imperative ref access** — retrieve the `UseFormReturn` instance via `ref` for advanced use cases.
+- **Flexible validation modes** — choose `onChange`, `onBlur`, `onSubmit`, or `all`.
+- **Multi-step support** — compose with the `Stepper` component and `useTriggerForm` for step-by-step validation.
+- **Dynamic arrays** — `FieldArray` handles lists of fields powered by `useFieldArray`.
+
+## Explore the Form System
+
+<CardGroup cols={2}>
+  <Card
+    title="ShaddyForm"
+    icon="rectangle-code"
+    href="/form/shaddy-form"
+  >
+    Full API reference for the core `ShaddyForm` component, including all props, the `ref` handle, and validation modes.
+  </Card>
+  <Card
+    title="Form Context"
+    icon="diagram-project"
+    href="/form/form-context"
+  >
+    Learn how `FormContext` and `useFormContext` power field components, and how to use `useTriggerForm` for programmatic validation.
+  </Card>
+  <Card
+    title="What Are Fields"
+    icon="input-text"
+    href="/form/what-are-fields"
+  >
+    Understand the Field pattern, available built-in fields, and how to create your own custom field components.
+  </Card>
+  <Card
+    title="FieldArray"
+    icon="list-ul"
+    href="/form/field-array"
+  >
+    Render dynamic, repeating groups of fields with add and remove controls using the `FieldArray` component.
+  </Card>
+  <Card
+    title="Multi-Step Form"
+    icon="stairs"
+    href="/form/multi-step-form"
+  >
+    Build wizard-style multi-step forms with per-step schema validation using `ShaddyForm` and `Stepper`.
+  </Card>
+</CardGroup>

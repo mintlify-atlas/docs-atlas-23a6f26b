@@ -1,47 +1,206 @@
 ---
-title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+title: "Get Started with Shaddy"
+sidebarTitle: "Quickstart"
+description: "Learn how to add Shaddy components, hooks, and the form system to your Next.js + shadcn/ui project in a few steps."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
-
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
+This quickstart guide walks you through adding Shaddy resources — UI components, typed hooks, and the form system — to an existing Next.js project. By the end you will have a working form backed by Zod validation, installed entirely without adding a new package dependency.
 
 ## Prerequisites
 
-Before you begin, you must have:
+Before adding any Shaddy resource, make sure your project meets the following requirements:
 
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
+- **Node.js >= 20** (enforced by Shaddy's own `engines` field)
+- A **Next.js project** (App Router recommended, matching Next.js 15)
+- **shadcn/ui** initialized in your project (`npx shadcn@latest init`)
+- **TypeScript** configured (Shaddy resources are fully typed)
+- **Tailwind CSS** set up in your project
 
-## Get started
+<Note>
+  If you haven't initialized shadcn/ui yet, run `npx shadcn@latest init` in your project root and follow the prompts before continuing.
+</Note>
+
+## How Shaddy Works
+
+Shaddy does **not** publish an npm package. Instead, it hosts a public shadcn-compatible registry at:
+
+```
+https://shaddy-docs.vercel.app/r/
+```
+
+You add resources using the same `npx shadcn@latest add <url>` CLI you already use for shadcn/ui components. The CLI fetches the resource from the registry and copies it directly into your codebase — you own the code, and you can customize it however you like.
+
+<Tip>
+  Because resources are copied into your project rather than imported from a package, you get full control over every line of code with zero runtime dependency on Shaddy.
+</Tip>
+
+## Step-by-Step Setup
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+  <Step title="Ensure shadcn/ui is initialized">
+    If you haven't already, initialize shadcn/ui in your Next.js project. This sets up the `components/ui` directory, your `tailwind.config`, and the `cn` utility that Shaddy resources depend on.
 
     ```bash
-    npm install your-package
+    npx shadcn@latest init
     ```
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
+
+  <Step title="Add the Shaddy Form System">
+    The `shaddy-form` registry item installs the `ShaddyForm` component along with its dependencies (`form`, `input`, `button`, and supporting field primitives from shadcn/ui).
 
     ```bash
-    your-cli init
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+    ```
+
+    This copies the following files into your project:
+
+    ```
+    components/form/shaddy-form.tsx
+    components/form/form-context.ts
+    components/form/text-field.tsx
+    components/form/submit-button.tsx
     ```
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
+
+  <Step title="Add a Typed Hook">
+    Hooks are added individually. Here's how to add `useBoolean`, a fully-typed boolean state manager:
 
     ```bash
-    your-cli start
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/use-boolean
     ```
+
+    This copies `hooks/use-boolean.ts` into your project.
+  </Step>
+
+  <Step title="Add a UI Component">
+    UI components are added the same way. For example, to add the `Stepper` component:
+
+    ```bash
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/stepper
+    ```
+
+    This copies `components/ui/stepper.tsx` and any required shadcn/ui peer components into your project.
+  </Step>
+
+  <Step title="Install any additional dependencies">
+    Some Shaddy resources declare additional npm dependencies. The `shadcn` CLI will prompt you to install them automatically. If you need to install them manually, use your preferred package manager:
+
+    <CodeGroup>
+      ```bash npm
+      npm install react-hook-form @hookform/resolvers zod
+      ```
+
+      ```bash yarn
+      yarn add react-hook-form @hookform/resolvers zod
+      ```
+
+      ```bash pnpm
+      pnpm add react-hook-form @hookform/resolvers zod
+      ```
+    </CodeGroup>
+
+    These packages are required by the `ShaddyForm` component, which wires `react-hook-form` and Zod together behind a clean generic API.
+  </Step>
+
+  <Step title="Build your first form">
+    With `ShaddyForm` copied into your project, you can build a validated form in just a few lines. Here is a minimal working example:
+
+    ```tsx
+    import { z } from "zod"
+    import { ShaddyForm } from "@/components/form/shaddy-form"
+    import { TextField } from "@/components/form/text-field"
+    import { SubmitButton } from "@/components/form/submit-button"
+
+    // 1. Define your schema with Zod
+    const loginSchema = z.object({
+      email: z.string().email("Please enter a valid email address"),
+      password: z.string().min(8, "Password must be at least 8 characters"),
+    })
+
+    type LoginValues = z.infer<typeof loginSchema>
+
+    // 2. Define initial values matching the schema shape
+    const initialValues: LoginValues = {
+      email: "",
+      password: "",
+    }
+
+    // 3. Render ShaddyForm — schema, initialValues, and onSubmit are all you need
+    export function LoginForm() {
+      const handleSubmit = (values: LoginValues) => {
+        console.log("Submitted:", values)
+      }
+
+      return (
+        <ShaddyForm
+          schema={loginSchema}
+          initialValues={initialValues}
+          onSubmit={handleSubmit}
+          className="space-y-4"
+        >
+          <TextField
+            name="email"
+            label="Email"
+            placeholder="you@example.com"
+          />
+          <TextField
+            name="password"
+            label="Password"
+            type="password"
+            placeholder="••••••••"
+          />
+          <SubmitButton>Sign in</SubmitButton>
+        </ShaddyForm>
+      )
+    }
+    ```
+
+    `ShaddyForm` is fully generic — TypeScript infers the field types from your Zod schema automatically, giving you type-safe access to form values in `onSubmit` with no extra type annotations needed.
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## Using the `useBoolean` Hook
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
+Once `hooks/use-boolean.ts` is in your project, import and use it like this:
+
+```tsx
+import { useBoolean } from "@/hooks/use-boolean"
+
+export function ToggleExample() {
+  const [isOpen, { toggle, setTrue, setFalse, reset }] = useBoolean(false)
+
+  return (
+    <div>
+      <p>Panel is: {isOpen ? "Open" : "Closed"}</p>
+      <button onClick={toggle}>Toggle</button>
+      <button onClick={setTrue}>Open</button>
+      <button onClick={setFalse}>Close</button>
+      <button onClick={reset}>Reset</button>
+    </div>
+  )
+}
+```
+
+The hook returns a tuple of `[value, controls]`, where `controls` exposes `toggle`, `setTrue`, `setFalse`, `reset`, `setValue`, and `getValue` — all correctly typed.
+
+## Registry Reference
+
+All Shaddy resources follow the same URL pattern:
+
+```
+https://shaddy-docs.vercel.app/r/<resource-name>
+```
+
+| Resource | Command |
+|---|---|
+| Form system | `npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form` |
+| useBoolean hook | `npx shadcn@latest add https://shaddy-docs.vercel.app/r/use-boolean` |
+| Stepper component | `npx shadcn@latest add https://shaddy-docs.vercel.app/r/stepper` |
+| Date Range Picker | `npx shadcn@latest add https://shaddy-docs.vercel.app/r/date-range-picker` |
+| Loading Spinner | `npx shadcn@latest add https://shaddy-docs.vercel.app/r/loading-spinner` |
+
+Browse the full list of available resources in the [UI Components](/ui/overview), [Typed Hooks](/hooks/overview), [Form](/form/overview), and [Utils](/utils/overview) sections of these docs.
+
+<Tip>
+  The Shaddy docs site at [shaddy-docs.vercel.app](https://shaddy-docs.vercel.app) includes live previews, API references, and source code for every available resource.
 </Tip>

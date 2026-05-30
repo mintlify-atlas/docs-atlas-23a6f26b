@@ -1,0 +1,117 @@
+---
+title: "usePrevious: Previous Value Hook for React"
+sidebarTitle: "usePrevious"
+description: "Capture the previous render's value of any React state or prop — fully generic and typed, returning undefined on the very first render."
+---
+
+`usePrevious` is a React hook that captures and returns the value a variable held during the **previous** render. It works with any type of value — state, props, derived variables — and is fully generic so the returned type always matches the input type. On the very first render it returns `undefined`, since there is no previous value yet. Common uses include animating between old and new values, detecting the direction of a change (e.g. ascending vs. descending), showing "was / now" diffs in UI, and conditionally triggering effects only when a value actually changed direction.
+
+## Installation
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/use-previous
+```
+
+## Signature
+
+```typescript
+const usePrevious = <T = any>(value: T): T | undefined
+```
+
+## Parameters
+
+<ParamField path="value" type="T" required>
+  The value to track across renders. This can be any type — primitive, object, array, function — and TypeScript infers `T` automatically from what you pass. The hook captures a snapshot of this value after each render via a `useEffect`.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="previousValue" type="T | undefined">
+  The value that `value` held during the previous render. Returns `undefined` on the very first render because no prior value exists.
+</ResponseField>
+
+## Usage
+
+### Tracking a Counter
+
+```tsx
+import { useState, useEffect } from "react"
+import { usePrevious } from "@/hooks/use-previous"
+
+export function Counter() {
+  const [count, setCount] = useState(0)
+  const prevCount = usePrevious(count)
+
+  return (
+    <div>
+      <p>Current count: {count}</p>
+      <p>Previous count: {prevCount ?? "—"}</p>
+      <p>
+        Trend:{" "}
+        {prevCount === undefined
+          ? "N/A"
+          : count > prevCount
+          ? "⬆ Increased"
+          : count < prevCount
+          ? "⬇ Decreased"
+          : "= No change"}
+      </p>
+
+      <button onClick={() => setCount((c) => c + 1)}>Increment</button>
+      <button onClick={() => setCount((c) => c - 1)}>Decrement</button>
+    </div>
+  )
+}
+```
+
+### Detecting a Prop Change
+
+```tsx
+import { useEffect } from "react"
+import { usePrevious } from "@/hooks/use-previous"
+
+type Props = { userId: string }
+
+export function UserProfile({ userId }: Props) {
+  const prevUserId = usePrevious(userId)
+
+  useEffect(() => {
+    if (prevUserId !== undefined && prevUserId !== userId) {
+      console.log(`User changed from ${prevUserId} to ${userId}`)
+      // fetch new user data, clear old state, etc.
+    }
+  }, [userId, prevUserId])
+
+  return <div>Profile for user: {userId}</div>
+}
+```
+
+### Animating a Value Change
+
+```tsx
+import { useState } from "react"
+import { usePrevious } from "@/hooks/use-previous"
+
+export function AnimatedScore({ score }: { score: number }) {
+  const prevScore = usePrevious(score)
+  const delta = prevScore !== undefined ? score - prevScore : 0
+
+  return (
+    <div>
+      <span style={{ fontSize: 32 }}>{score}</span>
+      {delta !== 0 && (
+        <span style={{ color: delta > 0 ? "green" : "red", marginLeft: 8 }}>
+          {delta > 0 ? `+${delta}` : delta}
+        </span>
+      )}
+    </div>
+  )
+}
+```
+
+## Notes
+
+- The hook stores the previous value in a `useRef` and updates it inside a `useEffect`, which runs **after** rendering. This means the ref always lags one render behind the current value — exactly what "previous" means.
+- On the initial render `prevCount` is `undefined`. Always guard against this when the distinction matters (`prevCount ?? fallback` or an explicit `undefined` check).
+- Because the hook uses a plain ref internally, changing the tracked value does not trigger an additional re-render. The previous value is available at no extra rendering cost.
+- The generic default is `any`, but TypeScript infers `T` from the argument so you get full type safety without an explicit type annotation in most cases.

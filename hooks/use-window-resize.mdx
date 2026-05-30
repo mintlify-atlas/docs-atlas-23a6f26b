@@ -1,0 +1,131 @@
+---
+title: "useWindowResize: Window Size Hook for React"
+sidebarTitle: "useWindowResize"
+description: "Track the current browser window width and height in React with debounced resize updates, SSR safety, and no external dependencies."
+---
+
+`useWindowResize` is a React hook that returns the current `width` and `height` of the browser window and keeps those values in sync as the window is resized. Resize events are debounced (200 ms by default) using `useDebouncedCallback` to avoid flooding your component with updates during a drag. The hook is also server-side rendering safe — both dimensions are `undefined` when there is no `window` object, preventing hydration mismatches in Next.js and similar frameworks.
+
+## Installation
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/use-window-resize
+```
+
+## Signature
+
+```typescript
+type WindowSize = {
+  width:  number | undefined
+  height: number | undefined
+}
+
+type UseWindowResize = () => WindowSize
+```
+
+## Parameters
+
+`useWindowResize` takes no parameters.
+
+## Return Value
+
+<ResponseField name="width" type="number | undefined">
+  The current `window.innerWidth` in pixels. `undefined` during server-side rendering or before the initial effect runs.
+</ResponseField>
+
+<ResponseField name="height" type="number | undefined">
+  The current `window.innerHeight` in pixels. `undefined` during server-side rendering or before the initial effect runs.
+</ResponseField>
+
+## Usage
+
+### Responsive Layout
+
+```tsx
+import { useWindowResize } from "@/hooks/use-window-resize"
+
+export function ResponsiveLayout() {
+  const { width = 0, height = 0 } = useWindowResize()
+
+  const isMobile  = width < 768
+  const isTablet  = width >= 768 && width < 1024
+  const isDesktop = width >= 1024
+
+  return (
+    <div>
+      <p>Window: {width} × {height}</p>
+      <p>
+        Layout:{" "}
+        {isMobile ? "Mobile" : isTablet ? "Tablet" : "Desktop"}
+      </p>
+
+      {isMobile && <MobileNav />}
+      {isDesktop && <DesktopSidebar />}
+    </div>
+  )
+}
+```
+
+### Conditional Rendering Based on Breakpoint
+
+```tsx
+import { useWindowResize } from "@/hooks/use-window-resize"
+
+const BREAKPOINTS = {
+  sm: 640,
+  md: 768,
+  lg: 1024,
+  xl: 1280,
+}
+
+export function AdaptiveComponent() {
+  const { width } = useWindowResize()
+
+  if (width === undefined) {
+    // Still on the server or before first paint
+    return <div>Loading…</div>
+  }
+
+  return (
+    <div>
+      {width >= BREAKPOINTS.lg ? (
+        <FullDataTable />
+      ) : (
+        <CompactCardList />
+      )}
+    </div>
+  )
+}
+```
+
+### Dynamic Canvas Size
+
+```tsx
+import { useRef, useEffect } from "react"
+import { useWindowResize } from "@/hooks/use-window-resize"
+
+export function FullscreenCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const { width = 800, height = 600 } = useWindowResize()
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    ctx.clearRect(0, 0, width, height)
+    ctx.fillStyle = "#3b82f6"
+    ctx.fillRect(width / 4, height / 4, width / 2, height / 2)
+  }, [width, height])
+
+  return <canvas ref={canvasRef} width={width} height={height} />
+}
+```
+
+## Notes
+
+- Resize events are debounced with a 200 ms delay via the internal `useDebouncedCallback` hook. This keeps your component responsive without triggering a re-render for every pixel of a resize drag.
+- On the server (`typeof window === 'undefined'`), both `width` and `height` are initialised to `undefined`. Always provide a fallback (e.g. `width ?? 0`) before doing arithmetic or comparisons.
+- The hook uses `useEventListener` internally to attach and clean up the `'resize'` listener, so you never need to call `removeEventListener` manually.
+- This hook depends on `useDebouncedCallback` and `useEventListener`. Both are installed automatically when you use the CLI command above.

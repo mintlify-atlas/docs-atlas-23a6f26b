@@ -1,28 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "name": "Shaddy",
+  "projectType": "frontend",
+  "projectName": "Shaddy",
+  "projectDescription": "A one-stop frontend resource library built on Next.js and shadcn/ui, offering reusable UI components, typed React hooks, form management utilities, utility functions, and React design patterns.",
   "theme": "willow",
-  "colors": {
-    "primary": "#7c7c7c",
-    "light": "#050505",
-    "dark": "#c8c8c8"
-  },
-  "favicon": "https://media.brand.dev/3f230fb4-9d70-464c-b1e7-ba86e7378c33.png",
-  "logo": {
-    "light": "https://media.brand.dev/69b813b8-811f-4d1a-bb93-1ed59fe8bb08.svg",
-    "dark": "https://media.brand.dev/69b813b8-811f-4d1a-bb93-1ed59fe8bb08.svg"
-  },
-  "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/rijvi-mahmud/shaddy"
-    }
-  },
-  "footer": {
-    "socials": {
-      "github": "https://github.com/rijvi-mahmud/shaddy"
-    }
-  },
+  "primaryColor": "#7c7c7c",
+  "lightColor": "#050505",
+  "darkColor": "#c8c8c8",
   "navigation": {
     "tabs": [
       {
@@ -151,5 +134,52 @@
         ]
       }
     ]
-  }
+  },
+  "keyFeatures": [
+    "Reusable UI components built on top of shadcn/ui (DateRangePicker, PhoneInput, Dropzone, Stepper)",
+    "Fully typed React hooks collection (useBoolean, useDebounce, useLocalStorage, useEventListener, and more)",
+    "Schema-driven form system (ShaddyForm) with react-hook-form and Zod integration",
+    "Pre-built form fields covering text, password, phone, select, checkbox, date, and more",
+    "Utility functions (composeProviders, createEnv) for better code organization",
+    "React design patterns guide covering Container-Presentation, Hooks, Compound Components, Render Props, and more",
+    "Internationalization (i18n) support via next-intl (English and Portuguese)",
+    "Built with Next.js App Router, TypeScript, Tailwind CSS, and Turbo monorepo"
+  ],
+  "publicApiSurface": [
+    "ShaddyForm<TSchema>",
+    "FormContext / useFormContext",
+    "FieldArray",
+    "useTriggerForm",
+    "TextField",
+    "UniqueTextField",
+    "TextAreaField",
+    "PasswordField",
+    "PhoneInputField",
+    "SelectField",
+    "SwitchField",
+    "CheckboxField",
+    "CheckboxGroupField",
+    "DatePickerField",
+    "DateRangePickerField",
+    "SubmitButton",
+    "ResetButton",
+    "useBoolean(initialValue)",
+    "useDefault(initialValue, defaultValue)",
+    "useClipboardCopy()",
+    "useDebounce(value, delay)",
+    "useDebouncedCallback(callback, delay)",
+    "useInterval(callback, delay)",
+    "usePrevious(value)",
+    "useWindowResize()",
+    "useEventListener(eventName, handler, element?)",
+    "useLocalStorage(key, initialValue)",
+    "useSessionStorage(key, initialValue)",
+    "useLogger(name, ...rest)",
+    "DateRangePicker",
+    "PhoneInput",
+    "Dropzone",
+    "Stepper / Step",
+    "composeProviders(providers, displayName?)",
+    "createEnv(schema)"
+  ]
 }

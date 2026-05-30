@@ -1,0 +1,183 @@
+---
+title: "useEventListener: Type-Safe Event Listener Hook for React"
+sidebarTitle: "useEventListener"
+description: "Attach and automatically clean up type-safe event listeners on any DOM element in React, with support for event delegation, capture options, and full TypeScript inference."
+---
+
+`useEventListener` is a React hook that attaches an event listener to a DOM element — `window`, `document`, any `HTMLElement`, or any `SVGElement` — and automatically removes it when the component unmounts or when the event name, element, or options change. It is fully generic: TypeScript infers the correct event type from the element and event name combination, so your handler receives a properly typed event object with no manual casting. It also supports event delegation via a `selector` option, letting a single listener handle events from many child elements efficiently.
+
+## Installation
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/use-event-listener
+```
+
+## Signature
+
+```typescript
+type ElementType = Window | Document | HTMLElement | SVGElement
+
+type UseEventListenerOptions = AddEventListenerOptions & {
+  /** CSS selector for event delegation */
+  selector?: string
+}
+
+const useEventListener = <
+  T extends ElementType,
+  K extends EventNameType<T>,
+>(
+  eventName: K,
+  handler:   (event: EventType<T, K & string>, delegateTarget?: Element) => void,
+  element?:  T | null,
+  options?:  UseEventListenerOptions | boolean
+) => void
+```
+
+## Parameters
+
+<ParamField path="eventName" type="string" required>
+  The name of the DOM event to listen for (e.g. `'click'`, `'keydown'`, `'resize'`, `'scroll'`). TypeScript constrains the valid values to the event map of the target element type, giving you autocomplete for event names.
+</ParamField>
+
+<ParamField path="handler" type="(event, delegateTarget?) => void" required>
+  The callback to invoke when the event fires. The `event` parameter is automatically typed to match the element–event combination (e.g. `MouseEvent` for a `click` on an `HTMLElement`, `KeyboardEvent` for `keydown`). When using event delegation, a second `delegateTarget` argument contains the matched element.
+</ParamField>
+
+<ParamField path="element" type="Window | Document | HTMLElement | SVGElement | null">
+  The target element to attach the listener to. Defaults to `window` when omitted or `null`. Pass a ref's `.current` value to attach to a specific DOM node.
+</ParamField>
+
+<ParamField path="options" type="UseEventListenerOptions | boolean">
+  Standard `addEventListener` options (`capture`, `once`, `passive`) plus an optional `selector` string for event delegation. When `selector` is provided, the handler is only called when the event target (or one of its ancestors) matches the CSS selector.
+</ParamField>
+
+## Return Value
+
+`useEventListener` returns `void`. Its effect is the side effect of attaching the listener.
+
+## Usage
+
+### Window Resize
+
+```tsx
+import { useEventListener } from "@/hooks/use-event-listener"
+
+export function WindowLogger() {
+  useEventListener("resize", () => {
+    console.log("Window size:", window.innerWidth, window.innerHeight)
+  })
+
+  return <p>Open your console and resize the window.</p>
+}
+```
+
+### Keyboard Events on Document
+
+```tsx
+import { useState } from "react"
+import { useEventListener } from "@/hooks/use-event-listener"
+
+export function KeyTracker() {
+  const [lastKey, setLastKey] = useState("")
+
+  useEventListener(
+    "keydown",
+    (event) => {
+      // event is KeyboardEvent — fully typed, no casting needed
+      setLastKey(event.key)
+    },
+    document
+  )
+
+  return <p>Last key pressed: {lastKey || "—"}</p>
+}
+```
+
+### Specific Element via Ref
+
+```tsx
+import { useRef } from "react"
+import { useEventListener } from "@/hooks/use-event-listener"
+
+export function ClickableBox() {
+  const boxRef = useRef<HTMLDivElement>(null)
+
+  useEventListener(
+    "click",
+    (event) => {
+      console.log("Box clicked at:", event.clientX, event.clientY)
+    },
+    boxRef.current
+  )
+
+  return (
+    <div ref={boxRef} style={{ width: 200, height: 200, background: "#3b82f6" }}>
+      Click me
+    </div>
+  )
+}
+```
+
+### Event Delegation
+
+```tsx
+import { useRef } from "react"
+import { useEventListener } from "@/hooks/use-event-listener"
+
+const items = ["Apple", "Banana", "Cherry"]
+
+export function DelegatedList() {
+  const listRef = useRef<HTMLUListElement>(null)
+
+  useEventListener(
+    "click",
+    (_event, delegateTarget) => {
+      if (delegateTarget) {
+        console.log("Clicked item:", delegateTarget.textContent)
+      }
+    },
+    listRef.current,
+    { selector: "li" }
+  )
+
+  return (
+    <ul ref={listRef}>
+      {items.map((item) => (
+        <li key={item} style={{ cursor: "pointer" }}>
+          {item}
+        </li>
+      ))}
+    </ul>
+  )
+}
+```
+
+### Passive Scroll Listener
+
+```tsx
+import { useEventListener } from "@/hooks/use-event-listener"
+
+export function ScrollDepthTracker() {
+  useEventListener(
+    "scroll",
+    () => {
+      const depth = Math.round(
+        (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100
+      )
+      console.log("Scroll depth:", depth, "%")
+    },
+    window,
+    { passive: true }
+  )
+
+  return <div style={{ height: "300vh" }}>Scroll to track depth</div>
+}
+```
+
+## Notes
+
+- The handler is stored in a ref so updating it between renders never triggers a listener re-attach. You will always get the freshest callback without resetting the event subscription.
+- Cleanup is fully automatic — the listener is removed when the component unmounts or when `eventName`, `element`, or `options` change.
+- If `element` is invalid or does not support `addEventListener`, the hook logs a warning and skips attachment gracefully.
+- When using the `selector` option for event delegation, the hook calls `Element.closest(selector)` on the event target and only fires your handler when a match is found.
+- The `selector` property is stripped from the options before being passed to `addEventListener`, so it never causes browser errors.

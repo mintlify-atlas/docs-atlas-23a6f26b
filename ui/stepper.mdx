@@ -1,0 +1,234 @@
+---
+title: "Stepper: Multi-Step UI Navigation"
+sidebarTitle: "Stepper"
+description: "A compound Stepper component for multi-step workflows in React, with built-in step error state, navigation controls, and a customizable complete action."
+---
+
+`Stepper` is a compound component that guides users through sequential, multi-step processes such as onboarding flows, checkout sequences, or multi-page forms. It renders a visual progress indicator row with numbered circles connected by lines, automatically marking completed steps with a green checkmark and errored steps with an alert icon. Navigation is handled by built-in **Previous** and **Next** / **Complete** buttons, and each `Step` can declare an async `validate` function that is run before advancing — keeping the user on the current step and displaying an error message if validation fails.
+
+## Installation
+
+<Steps>
+  <Step title="Install via CLI">
+    Run the shadcn CLI `add` command to copy the component into your project:
+
+    ```bash
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/stepper
+    ```
+  </Step>
+  <Step title="Install manually — dependencies">
+    If you prefer to install by hand, start with the required npm package:
+
+    ```bash
+    npm install lucide-react
+    ```
+  </Step>
+  <Step title="Install manually — shadcn components">
+    Add the shadcn/ui primitives the component relies on:
+
+    ```bash
+    npx shadcn@latest add button
+    ```
+  </Step>
+  <Step title="Update import paths">
+    After copying the source, adjust any `@/` aliases to match your project's path configuration.
+  </Step>
+</Steps>
+
+## Usage
+
+### Basic usage
+
+Wrap `Step` children inside `Stepper`. The component counts the `Step` children automatically to determine the total number of steps.
+
+```tsx
+import { Stepper, Step } from "@/components/ui/stepper"
+
+export default function OnboardingFlow() {
+  return (
+    <Stepper>
+      <Step>
+        <h3 className="text-lg font-semibold">Step 1: Personal Information</h3>
+        <p className="text-muted-foreground">Enter your basic details here.</p>
+      </Step>
+
+      <Step>
+        <h3 className="text-lg font-semibold">Step 2: Contact Details</h3>
+        <p className="text-muted-foreground">Provide your contact information.</p>
+      </Step>
+
+      <Step>
+        <h3 className="text-lg font-semibold">Step 3: Review</h3>
+        <p className="text-muted-foreground">Review your information before submitting.</p>
+      </Step>
+    </Stepper>
+  )
+}
+```
+
+### With async validation and a completion callback
+
+Each `Step` accepts an optional `validate` function. Return `{ hasError: true, message: "..." }` to block navigation and display the error inline. The `onComplete` callback on `Stepper` is invoked when the user presses the final action button on the last step (after that step's `validate` passes).
+
+```tsx
+import { useState } from "react"
+import { Stepper, Step } from "@/components/ui/stepper"
+
+export default function CheckoutFlow() {
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+
+  return (
+    <Stepper
+      onComplete={async () => {
+        await submitOrder({ name, email })
+        console.log("Order submitted!")
+      }}
+      completeLabel="Place Order"
+    >
+      <Step
+        validate={async () => {
+          if (!name.trim()) {
+            return { hasError: true, message: "Name is required." }
+          }
+          return { hasError: false }
+        }}
+      >
+        <h3 className="text-lg font-semibold">Your Name</h3>
+        <input
+          className="mt-2 w-full border rounded-md px-3 py-2"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Full name"
+        />
+      </Step>
+
+      <Step
+        validate={async () => {
+          if (!email.includes("@")) {
+            return { hasError: true, message: "Please enter a valid email address." }
+          }
+          return { hasError: false }
+        }}
+      >
+        <h3 className="text-lg font-semibold">Your Email</h3>
+        <input
+          className="mt-2 w-full border rounded-md px-3 py-2"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          type="email"
+        />
+      </Step>
+
+      <Step>
+        <h3 className="text-lg font-semibold">Confirm Order</h3>
+        <p className="text-muted-foreground">Name: {name}</p>
+        <p className="text-muted-foreground">Email: {email}</p>
+      </Step>
+    </Stepper>
+  )
+}
+```
+
+### Accessing stepper state from inside a step
+
+Use the `useStepperContext` hook inside any component rendered within the stepper tree to read or update the current step programmatically:
+
+```tsx
+import { useStepperContext } from "@/components/ui/stepper"
+
+function StepProgressBadge() {
+  const { currentStep, totalSteps } = useStepperContext()
+  return (
+    <span className="text-xs text-muted-foreground">
+      Step {currentStep} of {totalSteps}
+    </span>
+  )
+}
+```
+
+## API Reference
+
+### `<Stepper>`
+
+The root component. Provides `StepperContext` to all descendants and renders the step indicator row, step content, and navigation controls.
+
+<ParamField body="children" type="React.ReactNode">
+  One or more `<Step>` components. The stepper counts only direct `Step` children to determine `totalSteps`; other React nodes are ignored in the count.
+</ParamField>
+
+<ParamField body="onComplete" type="() => void | Promise<void>">
+  Callback invoked when the user presses the action button on the final step and that step's `validate` function (if any) passes. Supports async functions — the button remains in its pressed state until the promise resolves.
+</ParamField>
+
+<ParamField body="completeLabel" type="string" default='"Complete"'>
+  Label for the action button shown on the last step. Use a task-specific label such as `"Submit"`, `"Place Order"`, or `"Finish"` for better UX.
+</ParamField>
+
+---
+
+### `<Step>`
+
+Renders the content of a single step. Only the step matching the current `currentStep` index is visible at any time.
+
+<ParamField body="children" type="React.ReactNode">
+  The content to display for this step — form fields, descriptive text, preview panels, or any React nodes.
+</ParamField>
+
+<ParamField body="validate" type="() => StepError | Promise<StepError>">
+  Optional validation function called before advancing to the next step. Return `{ hasError: false }` to allow navigation or `{ hasError: true, message: "..." }` to block it. The message is rendered above the step content in a destructive text style.
+</ParamField>
+
+---
+
+### `useStepperContext()`
+
+Hook that returns the live `StepperContextType` object. Must be called from within the `Stepper` component tree; throws if used outside a `StepperContext`.
+
+```ts
+const {
+  currentStep,    // number — 1-based index of the active step
+  setCurrentStep, // (step: number) => void — jump to a specific step
+  totalSteps,     // number — total count of Step children
+  stepErrors,     // Record<number, StepError> — errors keyed by 1-based step index
+  setStepErrors,  // (errors: Record<number, StepError>) => void
+} = useStepperContext()
+```
+
+---
+
+## Types
+
+### `StepError`
+
+Return value of the `Step` `validate` function:
+
+```ts
+type StepError = {
+  hasError: boolean   // true if the step failed validation
+  message?: string    // optional message displayed above the step content
+}
+```
+
+### `StepperContextType`
+
+Shape of the context object returned by `useStepperContext`:
+
+```ts
+type StepperContextType = {
+  currentStep: number
+  setCurrentStep: (step: number) => void
+  totalSteps: number
+  stepErrors: Record<number, StepError>
+  setStepErrors: (errors: Record<number, StepError>) => void
+}
+```
+
+<Note>
+  Steps are 1-indexed throughout the API. `currentStep` starts at `1`, and `stepErrors` keys correspond to the 1-based step number.
+</Note>
+
+<Tip>
+  The `validate` prop supports async functions, so you can await server-side checks (e.g. checking whether an email is already registered) before allowing the user to advance.
+</Tip>

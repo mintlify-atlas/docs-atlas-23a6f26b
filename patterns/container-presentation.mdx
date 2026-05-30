@@ -1,0 +1,262 @@
+---
+title: "Container-Presentation Pattern in React"
+sidebarTitle: "Container-Presentation"
+description: "The Container-Presentation pattern separates data-fetching logic into container components from pure presentational components that only render UI."
+---
+
+When a single component handles data fetching, state management, side effects, and UI rendering all at once, every layer becomes harder to change in isolation. The Container-Presentation pattern — sometimes called Smart-Dumb or Stateful-Stateless — draws a clear boundary: containers own the logic, presentational components own the pixels.
+
+## The Problem
+
+Tightly coupled components are difficult to test and even harder to reuse. If a `UserList` component fetches its own data, you can't render it in Storybook without mocking the network, and you can't reuse the same UI with data from a different source without duplicating the fetch logic.
+
+## The Solution
+
+Split components into two roles:
+
+- **Container components** — manage state, fetch data from APIs, handle side effects, and connect to global state stores.
+- **Presentational components** — accept data through props, call callback props for events, and focus entirely on rendering UI.
+
+## Container Component
+
+A container component fetches and owns the data, then passes it down:
+
+```tsx
+// UserListContainer.tsx
+import { useState, useEffect } from 'react'
+import { UserList } from './UserList'
+
+interface User {
+  id: number
+  name: string
+  email: string
+}
+
+export function UserListContainer() {
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/users')
+      const data = await response.json()
+      setUsers(data)
+    } catch (err) {
+      setError('Failed to fetch users')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteUser = async (id: number) => {
+    try {
+      await fetch(`/api/users/${id}`, { method: 'DELETE' })
+      setUsers(users.filter((user) => user.id !== id))
+    } catch (err) {
+      setError('Failed to delete user')
+    }
+  }
+
+  return (
+    <UserList
+      users={users}
+      loading={loading}
+      error={error}
+      onDeleteUser={handleDeleteUser}
+    />
+  )
+}
+```
+
+## Presentational Component
+
+The presentational component knows nothing about where the data comes from — it only renders what it receives:
+
+```tsx
+// UserList.tsx
+interface User {
+  id: number
+  name: string
+  email: string
+}
+
+interface UserListProps {
+  users: User[]
+  loading: boolean
+  error: string | null
+  onDeleteUser: (id: number) => void
+}
+
+export function UserList({ users, loading, error, onDeleteUser }: UserListProps) {
+  if (loading) {
+    return <div className="text-center p-4">Loading users...</div>
+  }
+
+  if (error) {
+    return <div className="text-red-500 p-4">{error}</div>
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold">Users</h2>
+      <ul className="divide-y divide-gray-200">
+        {users.map((user) => (
+          <li key={user.id} className="py-4 flex justify-between items-center">
+            <div>
+              <p className="font-medium">{user.name}</p>
+              <p className="text-gray-600">{user.email}</p>
+            </div>
+            <button
+              onClick={() => onDeleteUser(user.id)}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              Delete
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+## One Container, Multiple Presentational Components
+
+A container's real power shows when it feeds multiple presentational components with the same data:
+
+```tsx
+// DashboardContainer.tsx
+import { useState, useEffect } from 'react'
+import { UserList } from './UserList'
+import { UserStats } from './UserStats'
+import { UserFilter } from './UserFilter'
+
+interface User {
+  id: number
+  name: string
+  email: string
+  status: 'active' | 'inactive'
+  joinedAt: string
+}
+
+export function DashboardContainer() {
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all')
+
+  useEffect(() => {
+    fetch('/api/users')
+      .then((res) => res.json())
+      .then((data) => { setUsers(data); setLoading(false) })
+  }, [])
+
+  const filteredUsers = users.filter((user) =>
+    filter === 'all' ? true : user.status === filter
+  )
+
+  const stats = {
+    total: users.length,
+    active: users.filter((u) => u.status === 'active').length,
+    inactive: users.filter((u) => u.status === 'inactive').length,
+  }
+
+  const handleStatusChange = async (userId: number, status: string) => {
+    await fetch(`/api/users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    })
+    // Refetch to keep UI in sync
+  }
+
+  return (
+    <div className="space-y-6">
+      <UserStats stats={stats} />
+      <UserFilter currentFilter={filter} onFilterChange={setFilter} />
+      <UserList
+        users={filteredUsers}
+        loading={loading}
+        onStatusChange={handleStatusChange}
+      />
+    </div>
+  )
+}
+```
+
+## Combining with Custom Hooks
+
+For containers with complex logic, extract the data layer into custom hooks and keep the container as a thin orchestrator:
+
+```tsx
+// hooks/useUserData.ts
+import { useState, useEffect } from 'react'
+
+export function useUserData() {
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/users')
+      .then((res) => res.json())
+      .then((data) => { setUsers(data); setLoading(false) })
+  }, [])
+
+  return { users, loading, setUsers }
+}
+```
+
+```tsx
+// DashboardContainer.tsx — now thin and easy to read
+import { useUserData } from './hooks/useUserData'
+import { UserList } from './UserList'
+import { UserStats } from './UserStats'
+
+export function DashboardContainer() {
+  const { users, loading, setUsers } = useUserData()
+
+  const stats = {
+    total: users.length,
+    active: users.filter((u) => u.status === 'active').length,
+  }
+
+  return (
+    <div className="space-y-6">
+      <UserStats stats={stats} />
+      <UserList users={users} loading={loading} />
+    </div>
+  )
+}
+```
+
+## When to Use
+
+- Components are mixing significant business logic with rendering code.
+- You need to reuse the same UI with different data sources.
+- Multiple UI components on a page share the same fetched data.
+- You want to test the UI in isolation without network or state dependencies.
+- Multiple team members are working on the same feature.
+
+## When Not to Use
+
+- The component is simple and doesn't contain complex logic.
+- You only need to render a single UI component with no sharing.
+- You're prototyping rapidly and the overhead of extra files slows you down.
+- The component won't be reused or composed with others.
+
+## Pros and Cons
+
+| | Pros | Cons |
+|---|---|---|
+| **Separation** | Logic and UI change independently | More files per feature |
+| **Testability** | Test UI with plain props; test logic in hooks | Requires discipline to maintain the boundary |
+| **Reusability** | Same UI with different containers | Over-applied to simple components, adds noise |
+| **Collaboration** | Designers and developers can work in parallel | Naming conventions must be agreed upon |
+
+<Tip>
+  Name containers consistently — `UserListContainer` and `UserList`, or `UserListPage` and `UserListView`. A clear naming convention makes the pattern obvious to new contributors.
+</Tip>

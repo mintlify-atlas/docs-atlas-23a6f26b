@@ -1,0 +1,192 @@
+---
+title: "useLocalStorage: localStorage Hook for React"
+sidebarTitle: "useLocalStorage"
+description: "Persist typed state in localStorage with automatic JSON serialization, a useState-compatible API, cross-tab synchronization, and configurable error handling."
+---
+
+`useLocalStorage` is a React hook that provides a `useState`-style interface for persisting values in the browser's `localStorage`. It handles JSON serialization and deserialization automatically, keeps state in sync across multiple tabs via the `storage` event, and exposes a third tuple element to remove the stored value and reset to the initial state. It accepts custom serializers for complex types like `Date` objects, an `onError` callback for graceful failure handling, and an `initializeWithValue` flag to control server-side rendering behaviour.
+
+## Installation
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/use-local-storage
+```
+
+<Note>
+  `useLocalStorage` depends on `useEventListener`. The CLI command above installs both automatically.
+</Note>
+
+## Signature
+
+```typescript
+type UseLocalStorageOptions<T> = {
+  serializer?:          (value: T) => string
+  deserializer?:        (value: string) => T
+  initializeWithValue?: boolean
+  onError?:             (error: Error, key: string) => void
+}
+
+function useLocalStorage<T>(
+  key:           string,
+  initialValue?: T | (() => T),
+  options?:      UseLocalStorageOptions<T>
+): [T, Dispatch<SetStateAction<T>>, () => void]
+```
+
+## Parameters
+
+<ParamField path="key" type="string" required>
+  The localStorage key to store the value under. Each unique key is an independent storage slot.
+</ParamField>
+
+<ParamField path="initialValue" type="T | (() => T)">
+  The value (or a factory function returning the value) to use when no entry exists in localStorage for the given `key`. Defaults to `undefined`.
+</ParamField>
+
+<ParamField path="options" type="UseLocalStorageOptions<T>">
+  Optional configuration object.
+
+  <Expandable title="UseLocalStorageOptions">
+    <ParamField path="serializer" type="(value: T) => string">
+      Custom function to convert the value to a string before writing to localStorage. Defaults to `JSON.stringify`.
+    </ParamField>
+    <ParamField path="deserializer" type="(value: string) => T">
+      Custom function to convert the stored string back to your value type. Defaults to `JSON.parse`.
+    </ParamField>
+    <ParamField path="initializeWithValue" type="boolean">
+      When `true` (the default), the hook reads from localStorage during the initial render. Set to `false` to start with `initialValue` and hydrate from localStorage in an effect — useful for SSR environments to avoid hydration mismatches.
+    </ParamField>
+    <ParamField path="onError" type="(error: Error, key: string) => void">
+      Called when a localStorage read or write operation throws. Defaults to a `console.warn` that includes the key and error message.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Return Value
+
+<ResponseField name="[0] storedValue" type="T">
+  The current value from localStorage (or `initialValue` if nothing is stored). Always typed as `T`.
+</ResponseField>
+
+<ResponseField name="[1] setValue" type="Dispatch<SetStateAction<T>>">
+  A setter function with the same API as React's `useState` setter. Accepts a new value directly or an updater function `(prev: T) => T`. Updates both the React state and localStorage atomically.
+</ResponseField>
+
+<ResponseField name="[2] removeValue" type="() => void">
+  Removes the item from localStorage and resets the React state to `initialValue`.
+</ResponseField>
+
+## Usage
+
+### Persisting a User Preference
+
+```tsx
+import { useLocalStorage } from "@/hooks/use-local-storage"
+
+type Theme = "light" | "dark" | "system"
+
+export function ThemeSelector() {
+  const [theme, setTheme, removeTheme] = useLocalStorage<Theme>(
+    "app-theme",
+    "system"
+  )
+
+  return (
+    <div>
+      <p>Current theme: {theme}</p>
+
+      <button onClick={() => setTheme("light")}>Light</button>
+      <button onClick={() => setTheme("dark")}>Dark</button>
+      <button onClick={() => setTheme("system")}>System</button>
+      <button onClick={removeTheme}>Reset to default</button>
+    </div>
+  )
+}
+```
+
+### Persisting a Complex Object
+
+```tsx
+import { useLocalStorage } from "@/hooks/use-local-storage"
+
+type UserSettings = {
+  notifications: boolean
+  language: string
+  fontSize: number
+}
+
+const DEFAULT_SETTINGS: UserSettings = {
+  notifications: true,
+  language: "en",
+  fontSize: 16,
+}
+
+export function SettingsPanel() {
+  const [settings, setSettings] = useLocalStorage<UserSettings>(
+    "user-settings",
+    DEFAULT_SETTINGS
+  )
+
+  return (
+    <div>
+      <label>
+        <input
+          type="checkbox"
+          checked={settings.notifications}
+          onChange={(e) =>
+            setSettings((prev) => ({ ...prev, notifications: e.target.checked }))
+          }
+        />
+        Enable notifications
+      </label>
+
+      <select
+        value={settings.language}
+        onChange={(e) =>
+          setSettings((prev) => ({ ...prev, language: e.target.value }))
+        }
+      >
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+        <option value="es">Español</option>
+      </select>
+    </div>
+  )
+}
+```
+
+### Custom Serialization for Date Objects
+
+```tsx
+import { useLocalStorage } from "@/hooks/use-local-storage"
+
+export function LastVisitTracker() {
+  const [lastVisit, setLastVisit] = useLocalStorage<Date | null>(
+    "last-visit",
+    null,
+    {
+      serializer:   (date) => (date ? date.toISOString() : ""),
+      deserializer: (str)  => (str ? new Date(str) : null),
+    }
+  )
+
+  const handleVisit = () => setLastVisit(new Date())
+
+  return (
+    <div>
+      <p>
+        Last visit:{" "}
+        {lastVisit ? lastVisit.toLocaleString() : "Never"}
+      </p>
+      <button onClick={handleVisit}>Record visit</button>
+    </div>
+  )
+}
+```
+
+## Notes
+
+- Changes from other browser tabs are detected via the `storage` event and automatically reflected in the hook's state, keeping all open tabs in sync.
+- The hook guards against environments where `window.localStorage` is unavailable (SSR, private browsing that has blocked storage) and calls `onError` gracefully rather than throwing.
+- The `setValue` setter accepts an updater function `(prev) => next` just like `useState`, making it easy to merge partial updates into object values.
+- If you need session-scoped persistence (cleared when the tab closes), use [`useSessionStorage`](/hooks/use-session-storage) instead, which has an identical API.

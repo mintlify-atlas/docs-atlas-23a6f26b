@@ -1,0 +1,243 @@
+---
+title: "Multi-Step Forms with Shaddy Form"
+sidebarTitle: "Multi-Step Form"
+description: "Build multi-step forms in React using ShaddyForm with the Stepper component, managing per-step schemas and validation with react-hook-form and Zod."
+---
+
+Long, complex forms intimidate users. Breaking them into discrete steps — a wizard or stepper pattern — reduces cognitive load and lets users focus on one group of related fields at a time. Shaddy Form supports multi-step forms by composing `ShaddyForm` with the `Stepper` component and the `useTriggerForm` hook for per-step field validation.
+
+## How It Works
+
+A multi-step form in Shaddy Form uses a **single `ShaddyForm`** with a **single Zod schema** that covers all steps. The `Stepper` component manages which step is visible and calls a `validate` function before allowing the user to advance. That `validate` function uses `useTriggerForm` to programmatically trigger `react-hook-form` validation on only the fields relevant to the current step — without submitting the entire form.
+
+Final submission happens when the user completes the last step. A hidden `<button type="submit">` is clicked imperatively via a `ref` to fire `ShaddyForm`'s `onSubmit` handler.
+
+```
+ShaddyForm (single schema, all steps)
+  └── Stepper
+        ├── Step 1 — validate(['name', 'age'])
+        ├── Step 2 — validate(['email', 'phone'])
+        └── Step N — onComplete triggers form submission
+```
+
+## Installation
+
+The `useTriggerForm` hook is required for per-step validation.
+
+<Steps>
+  <Step title="Install useTriggerForm">
+    ```bash
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/use-trigger-form
+    ```
+  </Step>
+  <Step title="Install the Stepper component">
+    ```bash
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/stepper
+    ```
+  </Step>
+  <Step title="Ensure ShaddyForm is installed">
+    ```bash
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+    ```
+  </Step>
+</Steps>
+
+## Full Example
+
+The example below implements a four-step profile form that validates each step's fields before allowing the user to proceed.
+
+```tsx
+import { useRef } from "react";
+import z from "zod";
+import { ShaddyForm, ShaddyFormRef } from "@/components/form/shaddy-form";
+import { Stepper, Step } from "@/components/ui/stepper";
+import { TextField } from "@/components/form/fields/text-field";
+import { TextAreaField } from "@/components/form/fields/text-area-field";
+import { useTriggerForm } from "@/components/form/use-trigger-form";
+
+const FormSchema = z.object({
+  // Step 1 — Personal Information
+  name: z.string().min(2).max(100),
+  age: z.coerce.number().min(0).optional(),
+  // Step 2 — Contact Information
+  email: z.string().email("Please enter a valid email address"),
+  phone: z.string().min(10, "Phone number must be at least 10 digits").optional(),
+  // Step 3 — Address
+  address: z.string().min(5, "Address must be at least 5 characters").optional(),
+  city: z.string().min(2, "City must be at least 2 characters").optional(),
+  country: z.string().min(2, "Country must be at least 2 characters"),
+  // Step 4 — Professional
+  occupation: z.string().min(2, "Occupation must be at least 2 characters").optional(),
+  bio: z.string().max(500, "Bio must be less than 500 characters").optional(),
+});
+
+type FormValues = z.infer<typeof FormSchema>;
+
+const initialValues: FormValues = {
+  name: "",
+  age: undefined,
+  email: "",
+  phone: "",
+  address: "",
+  city: "",
+  country: "",
+  occupation: "",
+  bio: "",
+};
+
+export function MultiStepProfileForm() {
+  const formRef = useRef<ShaddyFormRef<FormValues>>(null);
+  const submitRef = useRef<HTMLButtonElement>(null);
+  const triggerForm = useTriggerForm<FormValues>();
+
+  // Called by the Stepper when the last step is completed
+  const clickSubmit = () => {
+    submitRef.current?.click();
+  };
+
+  return (
+    <ShaddyForm<FormValues>
+      ref={formRef}
+      schema={FormSchema}
+      initialValues={initialValues}
+      onSubmit={(data) => console.log("Submitted:", data)}
+    >
+      <Stepper onComplete={clickSubmit} completeLabel="Submit">
+        {/* Step 1: Personal Information */}
+        <Step
+          validate={() =>
+            triggerForm(formRef.current?.form, ["name", "age"])
+          }
+        >
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Personal Information</h3>
+            <TextField<FormValues>
+              name="name"
+              label="Full Name"
+              placeholder="Enter your full name"
+            />
+            <TextField<FormValues>
+              name="age"
+              label="Age"
+              type="number"
+              placeholder="Enter your age"
+            />
+          </div>
+        </Step>
+
+        {/* Step 2: Contact Information */}
+        <Step
+          validate={() =>
+            triggerForm(formRef.current?.form, ["email", "phone"])
+          }
+        >
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Contact Information</h3>
+            <TextField<FormValues>
+              name="email"
+              label="Email Address"
+              type="email"
+              placeholder="you@example.com"
+            />
+            <TextField<FormValues>
+              name="phone"
+              label="Phone Number"
+              placeholder="+1 555 000 0000"
+            />
+          </div>
+        </Step>
+
+        {/* Step 3: Address */}
+        <Step
+          validate={() =>
+            triggerForm(formRef.current?.form, ["address", "city", "country"])
+          }
+        >
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Address</h3>
+            <TextField<FormValues>
+              name="address"
+              label="Street Address"
+              placeholder="123 Main Street"
+            />
+            <TextField<FormValues> name="city" label="City" placeholder="New York" />
+            <TextField<FormValues> name="country" label="Country" placeholder="United States" />
+          </div>
+        </Step>
+
+        {/* Step 4: Professional */}
+        <Step
+          validate={() =>
+            triggerForm(formRef.current?.form, ["occupation", "bio"])
+          }
+        >
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Professional Information</h3>
+            <TextField<FormValues>
+              name="occupation"
+              label="Occupation"
+              placeholder="Software Engineer"
+            />
+            <TextAreaField<FormValues>
+              name="bio"
+              label="Bio"
+              placeholder="Tell us about yourself…"
+            />
+          </div>
+        </Step>
+      </Stepper>
+
+      {/* Hidden submit button triggered programmatically on final step */}
+      <button type="submit" ref={submitRef} hidden />
+    </ShaddyForm>
+  );
+}
+```
+
+## Key Patterns Explained
+
+### Per-step validation with `useTriggerForm`
+
+`useTriggerForm` returns an async `triggerForm` function. Call it with the form instance (from `formRef.current?.form`) and an array of field paths to validate:
+
+```tsx
+const triggerForm = useTriggerForm<FormValues>();
+
+// Returns { hasError: boolean, message?: string }
+const result = await triggerForm(formRef.current?.form, ["email", "phone"]);
+
+if (result.hasError) {
+  // Stepper prevents advancing
+}
+```
+
+The `Stepper` component's `validate` prop accepts a function that returns this shape. If `hasError` is `true`, the stepper stays on the current step and the user sees field-level errors.
+
+### Accessing the form instance via `ref`
+
+`ShaddyForm` forwards a `ref` of type `ShaddyFormRef<T>`, which exposes `{ form: UseFormReturn<T> }`. This lets you reach the form instance from outside the render tree — useful for triggering validation or reading values in sibling components like the stepper.
+
+```tsx
+const formRef = useRef<ShaddyFormRef<FormValues>>(null);
+
+// Later, access the full react-hook-form API:
+const values = formRef.current?.form.getValues();
+```
+
+### Programmatic submission
+
+Because `<Stepper>` controls navigation, form submission is triggered imperatively when the final step is completed. A hidden `<button type="submit">` receives a `ref`, and the `Stepper`'s `onComplete` callback clicks it:
+
+```tsx
+const submitRef = useRef<HTMLButtonElement>(null);
+
+<Stepper onComplete={() => submitRef.current?.click()}>
+  {/* ... steps ... */}
+</Stepper>
+
+<button type="submit" ref={submitRef} hidden />
+```
+
+<Note>
+  The entire multi-step form uses a single Zod schema and a single `ShaddyForm`. There is no need to split your schema by step — `useTriggerForm` selectively validates only the paths relevant to each step.
+</Note>

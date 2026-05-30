@@ -1,0 +1,298 @@
+---
+title: "Hooks Pattern: Extracting Logic into Custom Hooks"
+sidebarTitle: "Hooks Pattern"
+description: "The Hooks pattern extracts stateful logic and side effects from components into custom React hooks for better reuse, testability, and separation of concerns."
+---
+
+Before React 16.8, sharing stateful logic between components required Higher-Order Components or Render Props — both of which add wrapper components to the tree and obscure what is actually happening. Custom hooks solve this more directly: extract the logic into a plain function, call it from any component, and get the same behaviour without any extra nesting.
+
+## What a Custom Hook Is
+
+A custom hook is a JavaScript function whose name starts with `use` and that can call other hooks internally. It can accept arguments, manage state, register effects, and return whatever values or functions a component needs.
+
+```ts
+// The three rules a custom hook follows:
+// 1. Name starts with "use"
+// 2. Can call other hooks (useState, useEffect, etc.)
+// 3. Returns values or functions the component uses
+```
+
+## Before and After Extraction
+
+**Before** — fetch logic lives inside the component, which makes it impossible to reuse and harder to test:
+
+```tsx
+// UserProfile.tsx — before
+import { useState, useEffect } from 'react'
+
+export function UserProfile({ userId }: { userId: number }) {
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch(`/api/users/${userId}`)
+      .then((res) => res.json())
+      .then((data) => { setUser(data); setLoading(false) })
+      .catch(() => { setError('Failed to fetch user'); setLoading(false) })
+  }, [userId])
+
+  if (loading) return <div>Loading...</div>
+  if (error) return <div>{error}</div>
+  return <div>{user?.name}</div>
+}
+```
+
+**After** — the fetch logic moves into a reusable hook:
+
+```tsx
+// hooks/useFetch.ts
+import { useState, useEffect } from 'react'
+
+interface UseFetchResult<T> {
+  data: T | null
+  loading: boolean
+  error: string | null
+  refetch: () => void
+}
+
+export function useFetch<T>(url: string): UseFetchResult<T> {
+  const [data, setData] = useState<T | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const result = await response.json()
+      setData(result)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [url])
+
+  return { data, loading, error, refetch: fetchData }
+}
+```
+
+```tsx
+// UserProfile.tsx — after
+import { useFetch } from './hooks/useFetch'
+
+interface User {
+  id: number
+  name: string
+  email: string
+  avatar: string
+}
+
+export function UserProfile({ userId }: { userId: number }) {
+  const { data: user, loading, error, refetch } = useFetch<User>(`/api/users/${userId}`)
+
+  if (loading) return <div className="text-center p-4">Loading user...</div>
+
+  if (error) {
+    return (
+      <div className="text-red-500 p-4">
+        <p>Error: {error}</p>
+        <button onClick={refetch} className="mt-2 px-4 py-2 bg-blue-500 text-white rounded">
+          Retry
+        </button>
+      </div>
+    )
+  }
+
+  if (!user) return <div className="p-4">No user found</div>
+
+  return (
+    <div className="p-6 border rounded-lg">
+      <img src={user.avatar} alt={user.name} className="w-20 h-20 rounded-full mb-4" />
+      <h2 className="text-2xl font-bold">{user.name}</h2>
+      <p className="text-gray-600">{user.email}</p>
+    </div>
+  )
+}
+```
+
+## Custom Hook for Form Input
+
+A simple hook that manages a single form field, including reset:
+
+```tsx
+// hooks/useInput.ts
+import { useState, ChangeEvent } from 'react'
+
+export function useInput(initialValue: string = '') {
+  const [value, setValue] = useState(initialValue)
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setValue(e.target.value)
+  }
+
+  const reset = () => {
+    setValue(initialValue)
+  }
+
+  return { value, onChange: handleChange, reset }
+}
+```
+
+```tsx
+// LoginForm.tsx
+import { useInput } from './hooks/useInput'
+
+export function LoginForm() {
+  const email = useInput('')
+  const password = useInput('')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    console.log('Email:', email.value)
+    console.log('Password:', password.value)
+    email.reset()
+    password.reset()
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <input type="email" placeholder="Email" {...email} className="w-full px-4 py-2 border rounded" />
+      <input type="password" placeholder="Password" {...password} className="w-full px-4 py-2 border rounded" />
+      <button type="submit" className="w-full px-4 py-2 bg-blue-500 text-white rounded">
+        Login
+      </button>
+    </form>
+  )
+}
+```
+
+## Composing Hooks
+
+Hooks compose naturally — one hook can call another. Here a `useTheme` hook builds on `useLocalStorage`:
+
+```tsx
+// hooks/useLocalStorage.ts
+import { useState, useEffect } from 'react'
+
+export function useLocalStorage<T>(key: string, initialValue: T) {
+  const [value, setValue] = useState<T>(() => {
+    try {
+      const item = window.localStorage.getItem(key)
+      return item ? JSON.parse(item) : initialValue
+    } catch {
+      return initialValue
+    }
+  })
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(value))
+    } catch (error) {
+      console.error('Error saving to localStorage:', error)
+    }
+  }, [key, value])
+
+  return [value, setValue] as const
+}
+```
+
+```tsx
+// hooks/useTheme.ts
+import { useLocalStorage } from './useLocalStorage'
+import { useEffect } from 'react'
+
+type Theme = 'light' | 'dark'
+
+export function useTheme() {
+  const [theme, setTheme] = useLocalStorage<Theme>('theme', 'light')
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark')
+  }, [theme])
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
+  }
+
+  return { theme, setTheme, toggleTheme }
+}
+```
+
+## Hook Composition Patterns
+
+**Data + Actions** — return both state and functions to modify it:
+
+```tsx
+function useCounter(initialValue = 0) {
+  const [count, setCount] = useState(initialValue)
+
+  const increment = () => setCount((c) => c + 1)
+  const decrement = () => setCount((c) => c - 1)
+  const reset = () => setCount(initialValue)
+
+  return { count, increment, decrement, reset }
+}
+```
+
+**Configuration object** — accept an options object for flexibility:
+
+```tsx
+function usePagination<T>(items: T[], config = { itemsPerPage: 10 }) {
+  const [currentPage, setCurrentPage] = useState(1)
+  const { itemsPerPage } = config
+
+  const totalPages = Math.ceil(items.length / itemsPerPage)
+  const currentItems = items.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
+
+  return {
+    currentItems,
+    currentPage,
+    totalPages,
+    nextPage: () => setCurrentPage((p) => Math.min(p + 1, totalPages)),
+    prevPage: () => setCurrentPage((p) => Math.max(p - 1, 1)),
+    goToPage: setCurrentPage,
+  }
+}
+```
+
+## Benefits
+
+- **Reusability** — write the logic once, use it in any component.
+- **Separation of concerns** — components stay focused on rendering; hooks own the behaviour.
+- **Testability** — hooks can be tested independently using `@testing-library/react-hooks`.
+- **Composability** — hooks call other hooks to build up complex behaviour from simple pieces.
+- **Readability** — component bodies become shorter and easier to follow.
+- **Type safety** — TypeScript types flow naturally through hook parameters and return values.
+
+## When to Use
+
+- The same stateful logic appears in two or more components.
+- A component has complex logic that distracts from its rendering purpose.
+- You want to test stateful behaviour independently from the UI.
+- Multiple components need to interact with the same external system (an API, localStorage, a WebSocket, etc.).
+
+## When Not to Use
+
+- The logic is only used in a single component and extraction adds no clarity.
+- The abstraction introduces more confusion than it removes.
+- The hook would have too many parameters or return too many values to be comprehensible.
+- You're simply wrapping a single built-in hook without adding any value.
+- The logic is purely synchronous and stateless — use a regular utility function instead.
+
+<Tip>
+  Always prefix custom hooks with `use`. This is required for React's linting rules to correctly enforce the Rules of Hooks within your custom hooks.
+</Tip>

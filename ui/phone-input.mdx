@@ -1,0 +1,145 @@
+---
+title: "PhoneInput: International Phone Number Input"
+sidebarTitle: "PhoneInput"
+description: "An international phone number input component with country flag selector, built on react-phone-number-input and shadcn/ui."
+---
+
+`PhoneInput` provides a polished, internationally-aware phone number field for React applications. It combines a searchable country dropdown — complete with circular flag icons — with a standard text input that automatically formats and validates numbers as the user types. Country detection is bi-directional: selecting a country from the dropdown prefixes the calling code into the input, and typing a valid international number into the input automatically updates the selected country flag. The country selector can be hidden entirely for simpler form designs.
+
+## Installation
+
+<Steps>
+  <Step title="Install via CLI">
+    Run the shadcn CLI `add` command to copy the component into your project:
+
+    ```bash
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/phone-input
+    ```
+  </Step>
+  <Step title="Install manually — dependencies">
+    If you prefer to install by hand, start with the required npm packages:
+
+    ```bash
+    npm install country-data-list libphonenumber-js react-circle-flags
+    ```
+  </Step>
+  <Step title="Install manually — shadcn components">
+    Add the shadcn/ui primitives the component relies on:
+
+    ```bash
+    npx shadcn@latest add popover command input scroll-area
+    ```
+  </Step>
+  <Step title="Update import paths">
+    After copying the source, adjust any `@/` aliases to match your project's path configuration.
+  </Step>
+</Steps>
+
+## Usage
+
+### With country selector (default)
+
+```tsx
+import { PhoneInput } from "@/components/ui/phone-input"
+
+export default function ContactForm() {
+  return (
+    <PhoneInput
+      defaultCountry="United_States"
+      withCountryCodeSelector
+      placeholder="Enter your phone number"
+      onCountryChange={(data) => console.log("Country:", data)}
+      onPhoneChange={(phone) => console.log("Phone:", phone)}
+    />
+  )
+}
+```
+
+### With a pre-selected default country
+
+```tsx
+<PhoneInput
+  defaultCountry="United_Kingdom"
+  withCountryCodeSelector
+  onPhoneChange={(phone) => console.log(phone)}
+/>
+```
+
+### Without the country selector
+
+Set `withCountryCodeSelector={false}` to render a plain phone input with a globe icon — useful when country selection is handled elsewhere or not required:
+
+```tsx
+<PhoneInput
+  withCountryCodeSelector={false}
+  placeholder="+1 555 000 0000"
+  onPhoneChange={(phone) => console.log(phone)}
+/>
+```
+
+## Props
+
+<ParamField body="onPhoneChange" type="(phone: string) => void">
+  Callback invoked whenever the phone number value changes. Receives the current input string, normalised with a leading `+` where possible.
+</ParamField>
+
+<ParamField body="onCountryChange" type="(data: CountryData | undefined) => void">
+  Callback invoked when the selected country changes — either through the dropdown or by parsing a typed international number. Receives the full `CountryData` object from `country-data-list`, or `undefined` when no country can be determined.
+</ParamField>
+
+<ParamField body="defaultCountry" type="keyof typeof CountryAlpha2">
+  Sets the initially selected country using a human-readable enum key (e.g. `"United_States"`, `"United_Kingdom"`, `"Germany"`). The component looks up the corresponding alpha-2 code and pre-populates both the flag and the calling-code prefix.
+</ParamField>
+
+<ParamField body="withCountryCodeSelector" type="boolean" default="true">
+  When `true` (default), renders the country dropdown to the left of the phone input. When `false`, renders only the text input with a globe icon for undetected countries and a flag icon once a country is identified from the typed number.
+</ParamField>
+
+<ParamField body="value" type="string">
+  Controlled value for the phone input field. When provided, the component reflects this value instead of its internal state.
+</ParamField>
+
+<ParamField body="placeholder" type="string" default='"Enter your phone number"'>
+  Placeholder text displayed inside the phone number input when it is empty.
+</ParamField>
+
+<ParamField body="disabled" type="boolean" default="false">
+  Disables both the country dropdown and the phone input when `true`.
+</ParamField>
+
+<ParamField body="className" type="string">
+  Additional CSS class names applied to the outer wrapper element.
+</ParamField>
+
+<Note>
+  `PhoneInput` extends `React.InputHTMLAttributes<HTMLInputElement>` (excluding `onChange`), so standard props like `name`, `id`, `aria-label`, and `autoComplete` are all forwarded to the underlying `<input>` element.
+</Note>
+
+## `CountryData` type
+
+The `CountryData` type is the raw country record from the `country-data-list` package. Key fields you are likely to use in `onCountryChange`:
+
+```ts
+type CountryData = {
+  name: string                  // e.g. "United States"
+  alpha2: string                // ISO 3166-1 alpha-2, e.g. "US"
+  countryCallingCodes: string[] // e.g. ["+1"]
+  emoji: string                 // flag emoji, e.g. "🇺🇸"
+}
+```
+
+## `CountryAlpha2` enum
+
+The `CountryAlpha2` enum is exported from the component and maps human-readable country name keys to their ISO alpha-2 codes. Use its keys for the `defaultCountry` prop:
+
+```ts
+import { CountryAlpha2 } from "@/components/ui/phone-input"
+
+// CountryAlpha2.United_States  → "US"
+// CountryAlpha2.United_Kingdom → "GB"
+// CountryAlpha2.Germany        → "DE"
+```
+
+<Tip>
+  When you type a full international number (e.g. `+44 7911 123456`), the component automatically parses it with `libphonenumber-js`, updates the country flag to 🇬🇧, and fires both `onCountryChange` and `onPhoneChange`.
+</Tip>

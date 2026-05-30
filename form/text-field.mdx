@@ -1,0 +1,116 @@
+---
+title: "TextField: Text Input for ShaddyForm"
+sidebarTitle: "TextField"
+description: "TextField renders a labeled text input integrated with ShaddyForm's context, with automatic validation messages and full react-hook-form support."
+---
+
+`TextField` is a reusable text input component that connects directly to `ShaddyForm`'s form context via `react-hook-form`. It supports labels, required indicators, optional icons, action buttons, a loading spinner, and flexible CSS overrides — all while wiring validation messages automatically through `FormMessage`.
+
+## Installation
+
+Install all ShaddyForm fields at once with the `shaddy-form` registry item:
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+```
+
+## Usage
+
+```tsx
+"use client"
+import { z } from "zod"
+import { ShaddyForm } from "@/components/form/shaddy-form"
+import { TextField } from "@/components/form/fields/text-field"
+import { SubmitButton } from "@/components/form/fields/submit-button"
+
+const schema = z.object({
+  name: z.string().min(1, { message: "Name is required" }),
+  email: z.string().email({ message: "Invalid email address" }),
+})
+
+type FormValues = z.infer<typeof schema>
+
+const initialValues: FormValues = { name: "", email: "" }
+
+export default function Example() {
+  return (
+    <ShaddyForm
+      schema={schema}
+      initialValues={initialValues}
+      onSubmit={(data) => console.log(data)}
+    >
+      <div className="space-y-4 w-72">
+        <TextField<FormValues>
+          name="name"
+          label="Name"
+          placeholder="Enter your name"
+        />
+        <TextField<FormValues>
+          name="email"
+          label="Email"
+          type="email"
+          required
+          placeholder="Enter your email"
+        />
+        <SubmitButton label="Submit" />
+      </div>
+    </ShaddyForm>
+  )
+}
+```
+
+## Props
+
+<ParamField path="name" type="Path<T>" required>
+  The field name. Must match a key in your Zod schema passed to `ShaddyForm`.
+</ParamField>
+
+<ParamField path="label" type="string">
+  Label text rendered above the input. Omit to hide the label entirely.
+</ParamField>
+
+<ParamField path="type" type="'text' | 'email' | 'number'" default="'text'">
+  The HTML input type. Use `'email'` or `'number'` to get native browser behaviour and the matching Zod validation.
+</ParamField>
+
+<ParamField path="placeholder" type="string" default="'Input'">
+  Placeholder text shown inside the input when it is empty.
+</ParamField>
+
+<ParamField path="required" type="boolean" default="false">
+  When `true`, a red asterisk is appended to the label as a visual indicator. Actual validation is controlled by your Zod schema.
+</ParamField>
+
+<ParamField path="action" type="() => void">
+  Callback fired when the action button on the right side of the input is clicked. When provided, a button is rendered using the `icon` prop (or a default ✕ icon).
+</ParamField>
+
+<ParamField path="icon" type="ReactNode">
+  An icon node to render on the right side of the input. Used as the button content when `action` is set, or as a static icon otherwise.
+</ParamField>
+
+<ParamField path="loading" type="boolean">
+  When `true`, replaces the right-side icon with an animated `LoadingSpinner`. Useful for async operations triggered from the field.
+</ParamField>
+
+<ParamField path="disabled" type="boolean" default="false">
+  Disables the underlying `<Input>` element when `true`.
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional Tailwind / CSS classes applied to the outermost `FormItem` wrapper.
+</ParamField>
+
+<ParamField path="inputClass" type="string">
+  Additional CSS classes applied directly to the `<Input>` element.
+</ParamField>
+
+<ParamField path="iconClass" type="string">
+  Additional CSS classes applied to the icon container or the action button.
+</ParamField>
+
+## Notes
+
+- `TextField` must be rendered inside a `<ShaddyForm>` — it reads `control` from `useFormContext` internally.
+- The `action` prop and `icon` prop work together: if both are provided, the icon becomes the button's content; if only `icon` is given, it renders as a static decoration; if only `action` is given, a default red ✕ icon is used.
+- Validation messages are rendered automatically below the input via shadcn/ui's `<FormMessage>`.

@@ -1,0 +1,94 @@
+---
+title: "useBoolean: Boolean State Hook for React"
+sidebarTitle: "useBoolean"
+description: "Manage boolean state in React with toggle, setTrue, setFalse, reset, and getValue helpers — all fully typed for TypeScript projects."
+---
+
+`useBoolean` is a simple but powerful custom React hook that provides convenient utilities for managing boolean state values. It encapsulates common boolean operations like toggling, setting to true or false, and resetting to the initial value — eliminating the repetitive `setState(!value)` boilerplate that appears in nearly every React project. It is especially useful for controlling modals, drawers, accordions, toggles, and any other UI element that maps naturally to an on/off state.
+
+## Installation
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/use-boolean
+```
+
+## Signature
+
+```typescript
+type BooleanHookReturnProps = {
+  setValue: (value: boolean) => void
+  toggle: () => void
+  setTrue: () => void
+  setFalse: () => void
+  reset: () => void
+  getValue: () => boolean
+}
+
+type UseBoolean = (initialValue: boolean) => [boolean, BooleanHookReturnProps]
+```
+
+## Parameters
+
+<ParamField path="initialValue" type="boolean" required>
+  The initial value for the boolean state. This value is also used by `reset()` to restore the state to its original setting.
+</ParamField>
+
+## Return Value
+
+`useBoolean` returns a two-element tuple.
+
+<ResponseField name="[0]" type="boolean">
+  The current boolean state value.
+</ResponseField>
+
+<ResponseField name="[1]" type="BooleanHookReturnProps">
+  An object containing control functions for the boolean state.
+
+  <Expandable title="BooleanHookReturnProps">
+    <ResponseField name="toggle" type="() => void">
+      Toggles the state between `true` and `false`.
+    </ResponseField>
+    <ResponseField name="setTrue" type="() => void">
+      Sets the state to `true`.
+    </ResponseField>
+    <ResponseField name="setFalse" type="() => void">
+      Sets the state to `false`.
+    </ResponseField>
+    <ResponseField name="reset" type="() => void">
+      Resets the state back to `initialValue`.
+    </ResponseField>
+    <ResponseField name="getValue" type="() => boolean">
+      Returns the current state value. Useful inside callbacks where you need the latest value without adding it to a dependency array.
+    </ResponseField>
+    <ResponseField name="setValue" type="(value: boolean) => void">
+      Sets the state to an explicit boolean value.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useBoolean } from "@/hooks/use-boolean"
+
+export function ModalExample() {
+  const [isOpen, { toggle, setTrue, setFalse, reset }] = useBoolean(false)
+
+  return (
+    <div>
+      <p>Modal is: {isOpen ? "Open" : "Closed"}</p>
+
+      <button onClick={setTrue}>Open Modal</button>
+      <button onClick={setFalse}>Close Modal</button>
+      <button onClick={toggle}>Toggle Modal</button>
+      <button onClick={reset}>Reset to Initial (false)</button>
+    </div>
+  )
+}
+```
+
+## Notes
+
+- `reset()` restores the state to the **`initialValue` that was passed on the first render**. If `initialValue` changes between renders, `reset()` still uses the original value captured at mount time.
+- `getValue()` is memoised with `useCallback` and always returns the most recent state. It is useful when you need to read the current value inside an event handler or async callback without causing stale closure issues.
+- All control functions have stable references across renders, making them safe to pass as props or include in dependency arrays.

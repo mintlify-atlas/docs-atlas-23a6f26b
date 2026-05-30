@@ -1,0 +1,177 @@
+---
+title: "useSessionStorage: sessionStorage Hook for React"
+sidebarTitle: "useSessionStorage"
+description: "Persist typed state in sessionStorage with automatic JSON serialization, a useState-compatible API, configurable error handling, and automatic cleanup on tab close."
+---
+
+`useSessionStorage` is a React hook that provides a `useState`-style interface for persisting values in the browser's `sessionStorage`. It has an identical API to `useLocalStorage` — JSON serialization, a setter that accepts values or updater functions, and a remover — with the key difference that session storage is scoped to the current browser tab and is automatically cleared when the tab is closed. It is ideal for temporary UI state that should survive page refreshes within a session but must not bleed into other tabs or persist permanently.
+
+## Installation
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/use-session-storage
+```
+
+## Signature
+
+```typescript
+type UseSessionStorageOptions<T> = {
+  serializer?:          (value: T) => string
+  deserializer?:        (value: string) => T
+  initializeWithValue?: boolean
+  onError?:             (error: Error, key: string) => void
+}
+
+function useSessionStorage<T>(
+  key:           string,
+  initialValue?: T | (() => T),
+  options?:      UseSessionStorageOptions<T>
+): [T, Dispatch<SetStateAction<T>>, () => void]
+```
+
+## Parameters
+
+<ParamField path="key" type="string" required>
+  The sessionStorage key to store the value under. Each unique key is an independent storage slot within the current tab's session.
+</ParamField>
+
+<ParamField path="initialValue" type="T | (() => T)">
+  The value (or a factory function returning the value) to use when no entry exists in sessionStorage for the given `key`. Defaults to `undefined`.
+</ParamField>
+
+<ParamField path="options" type="UseSessionStorageOptions<T>">
+  Optional configuration object.
+
+  <Expandable title="UseSessionStorageOptions">
+    <ParamField path="serializer" type="(value: T) => string">
+      Custom function to convert the value to a string before writing to sessionStorage. Defaults to `JSON.stringify`.
+    </ParamField>
+    <ParamField path="deserializer" type="(value: string) => T">
+      Custom function to convert the stored string back to your value type. Defaults to `JSON.parse`.
+    </ParamField>
+    <ParamField path="initializeWithValue" type="boolean">
+      When `true` (the default), the hook reads from sessionStorage during the initial render. Set to `false` to start with `initialValue` and hydrate in an effect — useful for SSR to avoid hydration mismatches.
+    </ParamField>
+    <ParamField path="onError" type="(error: Error, key: string) => void">
+      Called when a sessionStorage read or write operation throws. Defaults to a `console.warn` that includes the key and error message.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Return Value
+
+<ResponseField name="[0] storedValue" type="T">
+  The current value from sessionStorage, or `initialValue` when no entry exists for the key. Always typed as `T`.
+</ResponseField>
+
+<ResponseField name="[1] setValue" type="Dispatch<SetStateAction<T>>">
+  A setter function with the same API as React's `useState` setter. Accepts a new value directly or an updater function `(prev: T) => T`. Writes to sessionStorage and updates React state atomically.
+</ResponseField>
+
+<ResponseField name="[2] removeValue" type="() => void">
+  Removes the item from sessionStorage and resets the React state to `initialValue`.
+</ResponseField>
+
+## Usage
+
+### Persisting a Multi-Step Form
+
+```tsx
+import { useSessionStorage } from "@/hooks/use-session-storage"
+
+type FormDraft = {
+  step:  number
+  name:  string
+  email: string
+}
+
+const INITIAL_DRAFT: FormDraft = { step: 1, name: "", email: "" }
+
+export function MultiStepForm() {
+  const [draft, setDraft, clearDraft] = useSessionStorage<FormDraft>(
+    "signup-draft",
+    INITIAL_DRAFT
+  )
+
+  const goToNextStep = () =>
+    setDraft((prev) => ({ ...prev, step: prev.step + 1 }))
+
+  const handleSubmit = async () => {
+    await submitForm(draft)
+    clearDraft() // Remove draft after successful submission
+  }
+
+  return (
+    <div>
+      <p>Step {draft.step} of 3</p>
+
+      {draft.step === 1 && (
+        <input
+          value={draft.name}
+          onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))}
+          placeholder="Your name"
+        />
+      )}
+
+      {draft.step === 2 && (
+        <input
+          value={draft.email}
+          onChange={(e) => setDraft((prev) => ({ ...prev, email: e.target.value }))}
+          placeholder="Your email"
+        />
+      )}
+
+      {draft.step < 3 ? (
+        <button onClick={goToNextStep}>Next</button>
+      ) : (
+        <button onClick={handleSubmit}>Submit</button>
+      )}
+    </div>
+  )
+}
+```
+
+### Remembering a Tab Selection Within a Session
+
+```tsx
+import { useSessionStorage } from "@/hooks/use-session-storage"
+
+const TABS = ["Overview", "Analytics", "Settings"] as const
+type Tab = (typeof TABS)[number]
+
+export function TabbedDashboard() {
+  const [activeTab, setActiveTab] = useSessionStorage<Tab>(
+    "dashboard-tab",
+    "Overview"
+  )
+
+  return (
+    <div>
+      <nav>
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{ fontWeight: activeTab === tab ? "bold" : "normal" }}
+          >
+            {tab}
+          </button>
+        ))}
+      </nav>
+
+      <main>
+        {activeTab === "Overview"   && <Overview />}
+        {activeTab === "Analytics"  && <Analytics />}
+        {activeTab === "Settings"   && <Settings />}
+      </main>
+    </div>
+  )
+}
+```
+
+## Notes
+
+- `sessionStorage` is per-tab and per-origin. Data written in one tab is not accessible in another tab, and it is cleared automatically when the tab is closed.
+- Unlike `useLocalStorage`, this hook does not listen to `storage` events. `storage` events are not fired for sessionStorage changes in other tabs (since tabs cannot share session storage), so no cross-tab sync is needed.
+- The hook is safe to use in SSR environments — when `window.sessionStorage` is unavailable it falls back to `initialValue` and calls `onError` rather than throwing.
+- If you need data to persist beyond a single session (across tab closes and browser restarts), use [`useLocalStorage`](/hooks/use-local-storage) instead.

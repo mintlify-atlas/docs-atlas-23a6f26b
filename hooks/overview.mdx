@@ -1,0 +1,74 @@
+---
+title: "Typed Hooks: Fully Typed React Hooks for TypeScript"
+sidebarTitle: "Overview"
+description: "Shaddy Typed Hooks is a collection of fully typed, reusable React hooks built for TypeScript projects, covering boolean state, debouncing, storage, events, and more."
+---
+
+Typed Hooks is a lightweight collection of fully typed, reusable React hooks built specifically for TypeScript projects. Every hook ships with precise generic types and detailed JSDoc comments so you get instant autocomplete, compile-time error checking, and zero guesswork about what each hook accepts and returns.
+
+Rather than installing a heavy dependency and importing the entire library, each hook is copied directly into your codebase via the Shadcn CLI. You own the code — customise it freely, tree-shake it naturally, and never worry about upstream breaking changes.
+
+## Available Hooks
+
+<CardGroup cols={3}>
+  <Card title="useBoolean" href="/hooks/use-boolean">
+    Manage boolean state with toggle, setTrue, setFalse, and reset helpers.
+  </Card>
+  <Card title="useDefault" href="/hooks/use-default">
+    State with an automatic fallback when the value is null or undefined.
+  </Card>
+  <Card title="useClipboardCopy" href="/hooks/use-clipboard-copy">
+    Copy text to the clipboard and track the copy status (idle / success / error).
+  </Card>
+  <Card title="useDebounce" href="/hooks/use-debounce">
+    Delay a value update until a quiet period has elapsed.
+  </Card>
+  <Card title="useDebouncedCallback" href="/hooks/use-debounced-callback">
+    Debounce a callback function with leading, trailing, and maxWait options.
+  </Card>
+  <Card title="useInterval" href="/hooks/use-interval">
+    Run a callback on a recurring interval with start, stop, and reset controls.
+  </Card>
+  <Card title="usePrevious" href="/hooks/use-previous">
+    Capture the previous render's value of any state or prop.
+  </Card>
+  <Card title="useWindowResize" href="/hooks/use-window-resize">
+    Track the current window width and height with debounced updates.
+  </Card>
+  <Card title="useEventListener" href="/hooks/use-event-listener">
+    Attach type-safe event listeners to any DOM element with delegation support.
+  </Card>
+  <Card title="useLocalStorage" href="/hooks/use-local-storage">
+    Persist state in localStorage with JSON serialization and cross-tab sync.
+  </Card>
+  <Card title="useSessionStorage" href="/hooks/use-session-storage">
+    Persist state in sessionStorage with JSON serialization and error handling.
+  </Card>
+  <Card title="useLogger" href="/hooks/use-logger">
+    Advanced, configurable logger with log levels, colours, and grouping.
+  </Card>
+</CardGroup>
+
+## Installation
+
+Each hook is added individually using the Shadcn CLI. Replace `<hook-name>` with the kebab-case name of the hook you want:
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/<hook-name>
+```
+
+For example, to add `useBoolean`:
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/use-boolean
+```
+
+The command copies the hook's source file directly into your project. No runtime package is installed — the code is yours from the moment it lands in your repo.
+
+## Key Benefits
+
+- **TypeScript-first** — Every hook is authored in strict TypeScript with generic parameters and precise return types. Your IDE shows exactly what is accepted and returned.
+- **No package install** — Hooks are copied into your codebase, keeping your `node_modules` lean and giving you full control over the implementation.
+- **Modular** — Add only the hooks you need. Because each file is independent, unused hooks carry zero bundle cost.
+- **Battle-tested** — Each hook follows React best practices: stable callback references with `useCallback`, proper cleanup in `useEffect`, and safe server-side rendering guards.
+- **Developer friendly** — Simple, composable APIs with helpful JSDoc comments that surface in your editor as you type.

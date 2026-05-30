@@ -1,0 +1,99 @@
+---
+title: "CheckboxGroupField: Multi-Select Checkbox Group"
+sidebarTitle: "CheckboxGroupField"
+description: "CheckboxGroupField renders a group of labeled checkboxes in ShaddyForm, binding an array of selected values with built-in validation and error display."
+---
+
+`CheckboxGroupField` renders a collection of shadcn/ui `Checkbox` elements from a list of option objects, wiring them into ShaddyForm so the bound value is a `string[]` array of the currently checked option values. Checking or unchecking an item adds or removes it from the array, and validation errors are shown automatically via `<FormMessage>`.
+
+## Installation
+
+Install all ShaddyForm fields at once with the `shaddy-form` registry item:
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+```
+
+## Usage
+
+```tsx
+"use client"
+import { z } from "zod"
+import { ShaddyForm } from "@/components/form/shaddy-form"
+import { CheckboxGroupField } from "@/components/form/fields/checkbox-group-field"
+import { SubmitButton } from "@/components/form/fields/submit-button"
+
+const SKILL_OPTIONS = [
+  { value: "react", text: "React" },
+  { value: "vue", text: "Vue" },
+  { value: "angular", text: "Angular" },
+  { value: "svelte", text: "Svelte" },
+]
+
+const schema = z.object({
+  skills: z
+    .array(z.string())
+    .min(1, { message: "Select at least one skill" }),
+})
+
+type FormValues = z.infer<typeof schema>
+
+const initialValues: FormValues = { skills: [] }
+
+export default function Example() {
+  return (
+    <ShaddyForm
+      schema={schema}
+      initialValues={initialValues}
+      onSubmit={(data) => console.log(data)}
+    >
+      <div className="space-y-4 w-72">
+        <CheckboxGroupField<FormValues>
+          name="skills"
+          label="Skills"
+          options={SKILL_OPTIONS}
+          required
+        />
+        <SubmitButton label="Submit" />
+      </div>
+    </ShaddyForm>
+  )
+}
+```
+
+## Props
+
+<ParamField path="name" type="Path<T>" required>
+  The field name. Must match a key in your Zod schema passed to `ShaddyForm`. The bound value is a `string[]`.
+</ParamField>
+
+<ParamField path="options" type="{ value: string; text: string }[]" required>
+  Array of option objects. `value` is stored in the form array when checked; `text` is the label displayed next to each checkbox.
+</ParamField>
+
+<ParamField path="label" type="string">
+  Group label rendered above all the checkboxes. Omit to hide the group label.
+</ParamField>
+
+<ParamField path="required" type="boolean">
+  When `true`, appends a red asterisk to the group label as a visual indicator.
+</ParamField>
+
+<ParamField path="disabled" type="boolean">
+  When `true`, disables all checkboxes in the group.
+</ParamField>
+
+<ParamField path="column" type="boolean" default="true">
+  When `true` (the default), checkboxes are stacked vertically. Set to `false` to arrange them in a horizontal wrapping row.
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes applied to the outermost `FormItem` wrapper.
+</ParamField>
+
+## Notes
+
+- `CheckboxGroupField` must be rendered inside a `<ShaddyForm>` — it reads `control` from `useFormContext` internally.
+- The bound value is a `string[]`. Initialise your schema field with `z.array(z.string())` and an empty array default in `initialValues`.
+- For a single boolean checkbox (e.g. "Accept terms"), use [`CheckboxField`](/form/checkbox-field) instead.
+- Validation errors (e.g. minimum selection count) are rendered below the group via `<FormMessage>`.

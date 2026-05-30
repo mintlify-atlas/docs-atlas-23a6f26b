@@ -1,0 +1,109 @@
+---
+title: "useDebounce: Debounced Value Hook for React"
+sidebarTitle: "useDebounce"
+description: "Delay updating a reactive value in React until a quiet period has elapsed — ideal for search inputs, filters, and any rapidly-changing state that drives expensive operations."
+---
+
+`useDebounce` is a React hook that delays propagating a value to the rest of your component until the value has stopped changing for a specified number of milliseconds. This is the classic debouncing pattern: instead of reacting to every keystroke or slider movement, you wait for the user to pause before acting. It is the simplest way to avoid hammering an API on every character typed in a search box, or to keep expensive derived computations from running on every render.
+
+## Installation
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/use-debounce
+```
+
+## Signature
+
+```typescript
+const useDebounce = <T = any>(value: T, delay: number): T
+```
+
+## Parameters
+
+<ParamField path="value" type="T" required>
+  The input value to debounce. Can be any type — string, number, object, array, etc. The generic parameter `T` is inferred automatically from the argument you pass.
+</ParamField>
+
+<ParamField path="delay" type="number" required>
+  The quiet period in milliseconds. The debounced value updates only after this many milliseconds have passed since the last change to `value`. Values below `0` are clamped to `0`.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="debouncedValue" type="T">
+  The debounced copy of `value`. It mirrors `value` exactly but only updates after `delay` milliseconds of inactivity. On the first render it is initialised to the same value as `value`.
+</ResponseField>
+
+## Usage
+
+### Debounced Search Input
+
+```tsx
+import { useState } from "react"
+import { useDebounce } from "@/hooks/use-debounce"
+
+function searchUsers(query: string) {
+  // Simulate an API call
+  console.log("Searching for:", query)
+}
+
+export function SearchInput() {
+  const [query, setQuery] = useState("")
+  const debouncedQuery = useDebounce(query, 500)
+
+  // This effect only fires when the user pauses typing for 500 ms
+  useEffect(() => {
+    if (debouncedQuery) {
+      searchUsers(debouncedQuery)
+    }
+  }, [debouncedQuery])
+
+  return (
+    <div>
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search users…"
+      />
+      <p>Debounced query: {debouncedQuery}</p>
+    </div>
+  )
+}
+```
+
+### Debounced Number (Slider)
+
+```tsx
+import { useState } from "react"
+import { useDebounce } from "@/hooks/use-debounce"
+
+export function PriceFilter() {
+  const [maxPrice, setMaxPrice] = useState(100)
+  const debouncedMaxPrice = useDebounce(maxPrice, 300)
+
+  useEffect(() => {
+    console.log("Filtering products with max price:", debouncedMaxPrice)
+  }, [debouncedMaxPrice])
+
+  return (
+    <div>
+      <input
+        type="range"
+        min={0}
+        max={500}
+        value={maxPrice}
+        onChange={(e) => setMaxPrice(Number(e.target.value))}
+      />
+      <p>Max price: ${maxPrice} (applied: ${debouncedMaxPrice})</p>
+    </div>
+  )
+}
+```
+
+## Notes
+
+- The hook is generic (`<T = any>`), so the debounced value's type exactly matches the input value's type — no casting needed.
+- Each time `value` changes, the internal timer is cleared and restarted. The debounced value only updates when the timer completes without interruption.
+- Setting `delay` to `0` still defers the update by one event-loop tick (via `setTimeout(fn, 0)`), which can be useful for batching updates.
+- If you need to debounce a **function** rather than a value, use [`useDebouncedCallback`](/hooks/use-debounced-callback) instead.

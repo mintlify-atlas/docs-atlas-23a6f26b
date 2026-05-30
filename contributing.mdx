@@ -1,0 +1,188 @@
+---
+title: "Contributing to Shaddy"
+sidebarTitle: "Contributing"
+description: "Learn how to contribute to Shaddy — from forking and setting up the monorepo, to following commit conventions and submitting pull requests."
+---
+
+Contributing to Shaddy is a great way to improve the library for the entire community. This page covers everything you need to go from a fresh fork to a merged pull request — including environment setup, the monorepo layout, commit message conventions enforced by Commitlint, and the PR review process.
+
+## Prerequisites
+
+Make sure the following tools are installed before you begin:
+
+- **Node.js >= 20** — enforced by the root `package.json` `engines` field
+- **pnpm** — Shaddy uses pnpm workspaces for monorepo dependency management. Install it via:
+
+```bash
+npm install -g pnpm
+```
+
+## Setting Up the Development Environment
+
+<Steps>
+  <Step title="Fork the repository">
+    Head to [github.com/rijvi-mahmud/shaddy](https://github.com/rijvi-mahmud/shaddy) and click **Fork** to create your own copy of the repository under your GitHub account.
+  </Step>
+
+  <Step title="Clone your fork">
+    Clone your fork locally and enter the project directory:
+
+    ```bash
+    git clone https://github.com/<your-username>/shaddy.git
+    cd shaddy
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all workspace dependencies from the repo root. pnpm will resolve packages for every app and package in the monorepo in a single pass:
+
+    ```bash
+    pnpm install
+    ```
+  </Step>
+
+  <Step title="Create a feature branch">
+    Never commit directly to `main`. Create a dedicated branch named after your feature or fix:
+
+    ```bash
+    git checkout -b feat/my-new-component
+    ```
+
+    Use the same type prefix in your branch name as in your commit messages (e.g. `feat/`, `fix/`, `docs/`).
+  </Step>
+
+  <Step title="Start the development server">
+    Run the Turbo-powered dev server from the repo root. This starts the Next.js docs site and the registry build watcher in parallel:
+
+    ```bash
+    pnpm dev
+    ```
+
+    The docs site will be available at `http://localhost:3000`. The registry builder watches for changes in `apps/web/src/registry/` and rebuilds automatically.
+  </Step>
+</Steps>
+
+## Monorepo Layout
+
+Shaddy is a **Turborepo monorepo** managed with **pnpm workspaces**. Understanding where things live will help you make changes in the right place.
+
+```
+shaddy/
+├── apps/
+│   ├── web/                  # Next.js docs site + registry server
+│   │   └── src/
+│   │       ├── components/   # Shared UI and MDX components
+│   │       ├── registry/     # Registry definitions and built source files
+│   │       │   ├── default/  # Actual hook, form, and UI source code
+│   │       │   ├── registry-hook.ts
+│   │       │   ├── registry-ui.ts
+│   │       │   ├── registry-form.ts
+│   │       │   └── registry-utils.ts
+│   │       └── config/       # Site configuration
+│   └── content/              # MDX documentation content files
+└── packages/
+    ├── eslint-config/         # Shared ESLint rules
+    └── typescript-config/    # Shared tsconfig bases
+```
+
+When adding a **new component or hook**, you will typically:
+
+1. Add the source file under `apps/web/src/registry/default/`
+2. Register it in the appropriate `registry-*.ts` file
+3. Add an MDX documentation page in `apps/content/`
+
+## Making Changes
+
+- Match the existing code style in whichever file you are editing.
+- Write clear, focused commits — one logical change per commit.
+- Update or add documentation for any new component, hook, or utility you introduce.
+- Add usage examples when contributing new registry items.
+
+## Linting and Formatting
+
+Run both checks before pushing your branch. Husky and lint-staged enforce these automatically on each commit, but it is good practice to run them manually first:
+
+```bash
+# Check for lint errors across the monorepo
+pnpm lint
+
+# Auto-format all TypeScript, TSX, and Markdown files
+pnpm format
+```
+
+<Warning>
+  Pull requests with lint errors or unformatted code will fail the CI pipeline. Fix all issues locally before opening a PR.
+</Warning>
+
+## Commit Message Format
+
+Shaddy enforces [Conventional Commits](https://www.conventionalcommits.org/) via **Commitlint**. Every commit message must follow this format:
+
+```
+<type>[optional scope]: <short description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+The short description should be written in the imperative mood, lowercase, and without a trailing period (e.g. `add password strength indicator`, not `Added password strength indicator.`).
+
+**Examples:**
+
+```bash
+feat(form): add password strength indicator
+fix(ui): correct button alignment on mobile
+docs: update contributing guidelines
+refactor(hooks): simplify useDebounce implementation
+chore: upgrade turbo to v2.4.2
+```
+
+<Accordion title="All supported commit types">
+  | Type | When to use |
+  |---|---|
+  | `feat` | A new feature or registry item |
+  | `fix` | A bug fix in existing code |
+  | `docs` | Documentation-only changes (MDX pages, READMEs) |
+  | `style` | Whitespace, formatting, or punctuation — no logic changes |
+  | `refactor` | Code restructuring that neither adds a feature nor fixes a bug |
+  | `perf` | A change that improves performance |
+  | `test` | Adding or correcting tests |
+  | `chore` | Build process, dependency updates, tooling configuration |
+</Accordion>
+
+<Warning>
+  Your pull request will be **blocked** by Commitlint if any commit message does not follow the Conventional Commits format. Rebase and amend non-conforming commits before pushing.
+</Warning>
+
+## Submitting a Pull Request
+
+<Steps>
+  <Step title="Push your branch to your fork">
+    ```bash
+    git push origin feat/my-new-component
+    ```
+  </Step>
+
+  <Step title="Open a pull request against `main`">
+    Go to your fork on GitHub and click **Compare & pull request**. Set the base branch to `main` on `rijvi-mahmud/shaddy`.
+  </Step>
+
+  <Step title="Fill out the PR template">
+    Describe what your PR changes, why the change is needed, and how to test it. Include screenshots or a short demo for visual changes.
+  </Step>
+
+  <Step title="Address review feedback">
+    A maintainer will review your PR and may request changes. Push additional commits to the same branch — the PR will update automatically. Once all feedback is resolved and CI passes, your contribution will be merged.
+  </Step>
+</Steps>
+
+## Need Help?
+
+- Browse the [README](https://github.com/rijvi-mahmud/shaddy#readme) for a high-level project overview.
+- Open a [GitHub Issue](https://github.com/rijvi-mahmud/shaddy/issues) with questions, bug reports, or feature suggestions.
+- Start a [GitHub Discussion](https://github.com/rijvi-mahmud/shaddy/discussions) for broader conversations about direction or design.
+
+<Note>
+  Shaddy follows the [Contributor Covenant Code of Conduct v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/). All contributors are expected to be respectful and considerate in every interaction. Instances of abusive, harassing, or otherwise unacceptable behavior may be reported directly to the project maintainers.
+</Note>

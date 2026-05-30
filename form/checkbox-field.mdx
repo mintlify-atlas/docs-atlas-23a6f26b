@@ -1,0 +1,100 @@
+---
+title: "CheckboxField: Single Checkbox Input for ShaddyForm"
+sidebarTitle: "CheckboxField"
+description: "CheckboxField renders a shadcn/ui Checkbox inside ShaddyForm, binding a single boolean value with label and automatic validation error display."
+---
+
+`CheckboxField` wires a single shadcn/ui `Checkbox` into ShaddyForm's form context, binding it to a boolean field in your schema. It supports the same flexible layout options as `SwitchField` — configurable gap, column arrangement, and reversed order — along with a required indicator and automatic validation error messages.
+
+## Installation
+
+Install all ShaddyForm fields at once with the `shaddy-form` registry item:
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+```
+
+## Usage
+
+```tsx
+"use client"
+import { z } from "zod"
+import { ShaddyForm } from "@/components/form/shaddy-form"
+import { CheckboxField } from "@/components/form/fields/checkbox-field"
+import { SubmitButton } from "@/components/form/fields/submit-button"
+
+const schema = z.object({
+  acceptTerms: z.boolean().refine((val) => val === true, {
+    message: "You must accept the terms and conditions",
+  }),
+})
+
+type FormValues = z.infer<typeof schema>
+
+const initialValues: FormValues = { acceptTerms: false }
+
+export default function Example() {
+  return (
+    <ShaddyForm
+      mode="onChange"
+      schema={schema}
+      initialValues={initialValues}
+      onSubmit={(data) => console.log(data)}
+    >
+      <div className="space-y-4 w-72">
+        <CheckboxField<FormValues>
+          name="acceptTerms"
+          label="I accept the Terms and Conditions"
+          required
+        />
+        <SubmitButton label="Submit" />
+      </div>
+    </ShaddyForm>
+  )
+}
+```
+
+## Props
+
+<ParamField path="name" type="Path<T>" required>
+  The field name. Must match a key in your Zod schema passed to `ShaddyForm`.
+</ParamField>
+
+<ParamField path="label" type="string">
+  Label text rendered next to the checkbox. Omit to render the checkbox without a visible label.
+</ParamField>
+
+<ParamField path="required" type="boolean" default="false">
+  When `true`, appends a red asterisk to the label as a visual indicator.
+</ParamField>
+
+<ParamField path="disabled" type="boolean" default="false">
+  Disables the underlying `Checkbox` component when `true`.
+</ParamField>
+
+<ParamField path="column" type="boolean" default="false">
+  When `true`, stacks the checkbox and label vertically instead of side by side.
+</ParamField>
+
+<ParamField path="longGap" type="boolean" default="false">
+  When `true`, applies `justify-between` to push the checkbox and label to opposite ends of the container.
+</ParamField>
+
+<ParamField path="reverse" type="boolean" default="false">
+  When `true`, renders the label before the checkbox (label on the left). By default the checkbox appears first.
+</ParamField>
+
+<ParamField path="gap" type="'2' | '4' | '6' | '8'" default="'2'">
+  The Tailwind gap class applied between the checkbox and its label.
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes applied to the outermost `FormItem` wrapper.
+</ParamField>
+
+## Notes
+
+- `CheckboxField` is intended for a single boolean toggle. To allow users to select multiple values from a list of checkboxes, use [`CheckboxGroupField`](/form/checkbox-group-field) instead.
+- The bound value is a `boolean`. Initialise your schema field with `z.boolean()` and a matching `false` default in `initialValues`.
+- Validation errors are rendered slightly indented (`ml-6`) below the checkbox via `<FormMessage>`.
+- `CheckboxField` must be rendered inside a `<ShaddyForm>` — it reads `control` from `useFormContext` internally.

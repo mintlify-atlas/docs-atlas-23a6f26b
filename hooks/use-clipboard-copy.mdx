@@ -1,0 +1,101 @@
+---
+title: "useClipboardCopy: Clipboard Copy Hook for React"
+sidebarTitle: "useClipboardCopy"
+description: "Copy text to the clipboard in React with a single async call and track the result through a typed status — idle, success, or error — with no external dependencies."
+---
+
+`useClipboardCopy` is a React hook that wraps the browser's `navigator.clipboard.writeText` API and exposes a clean, typed interface for copying text to the clipboard. It tracks what was last copied and the current copy status (`idle`, `success`, or `error`), so you can easily update your UI — for example, swapping a "Copy" label for a "Copied!" confirmation — without managing that state yourself. The status automatically resets to `idle` after two seconds.
+
+## Installation
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/use-clipboard-copy
+```
+
+## Signature
+
+```typescript
+type CopiedValue = string | null
+type CopyFunc   = (text: string) => Promise<boolean>
+type CopyStatus = 'idle' | 'success' | 'error'
+type UseClipboardCopyReturn = [CopiedValue, CopyFunc, CopyStatus]
+
+function useClipboardCopy(): UseClipboardCopyReturn
+```
+
+## Parameters
+
+`useClipboardCopy` takes no parameters.
+
+## Return Value
+
+The hook returns a three-element tuple.
+
+<ResponseField name="[0] copiedText" type="string | null">
+  The text that was most recently copied successfully. `null` when nothing has been copied yet or when the last copy attempt failed.
+</ResponseField>
+
+<ResponseField name="[1] copy" type="(text: string) => Promise<boolean>">
+  An async function that writes the provided string to the clipboard. Returns `true` on success and `false` when the clipboard API is unavailable or the operation fails.
+</ResponseField>
+
+<ResponseField name="[2] copyStatus" type="'idle' | 'success' | 'error'">
+  The current state of the copy operation.
+  - `'idle'` — no copy has been attempted yet, or the status has reset after a previous attempt.
+  - `'success'` — the last copy succeeded.
+  - `'error'` — the last copy failed (for example, because clipboard access was denied).
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useClipboardCopy } from "@/hooks/use-clipboard-copy"
+
+export function CopyButton({ text }: { text: string }) {
+  const [copiedText, copy, copyStatus] = useClipboardCopy()
+
+  return (
+    <div>
+      <pre>{text}</pre>
+
+      <button onClick={() => copy(text)}>
+        {copyStatus === "success" ? "Copied!" : "Copy"}
+      </button>
+
+      {copyStatus === "error" && (
+        <p style={{ color: "red" }}>Failed to copy. Please try again.</p>
+      )}
+
+      {copiedText && (
+        <p>Last copied: {copiedText}</p>
+      )}
+    </div>
+  )
+}
+```
+
+### Checking the Return Value
+
+```tsx
+import { useClipboardCopy } from "@/hooks/use-clipboard-copy"
+
+export function ShareLink() {
+  const [, copy] = useClipboardCopy()
+
+  const handleShare = async () => {
+    const success = await copy(window.location.href)
+    if (!success) {
+      alert("Clipboard unavailable — please copy the URL manually.")
+    }
+  }
+
+  return <button onClick={handleShare}>Share this page</button>
+}
+```
+
+## Notes
+
+- The `copy` function is memoised with `useCallback` and has a stable reference across renders, so it is safe to pass as a prop or include in a dependency array.
+- The hook logs a warning to the console when `navigator.clipboard` is not available (for example, in non-HTTPS contexts) or when an empty string is passed.
+- The `copyStatus` automatically resets to `'idle'` two seconds after a `'success'` or `'error'` result, so transient UI feedback disappears without any extra work on your side.
+- Clipboard access requires a secure context (HTTPS or `localhost`). In HTTP environments the `copy` function returns `false` and logs a warning.

@@ -1,0 +1,96 @@
+---
+title: "DatePickerField: Calendar Date Picker for ShaddyForm"
+sidebarTitle: "DatePickerField"
+description: "DatePickerField renders a shadcn/ui popover calendar in ShaddyForm, binding a Date value with label, format control, and validation error display."
+---
+
+`DatePickerField` renders a button that opens a shadcn/ui `Popover` containing a `Calendar` component, letting users pick a single date. The selected `Date` object is stored directly in the form state, the calendar is shown in `dropdown` caption layout for quick year/month navigation, and the formatted date is displayed on the trigger button using `date-fns` format `'PPP'` (e.g. "April 29th, 2025").
+
+## Installation
+
+Install all ShaddyForm fields at once with the `shaddy-form` registry item:
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+```
+
+## Usage
+
+```tsx
+"use client"
+import { z } from "zod"
+import { ShaddyForm } from "@/components/form/shaddy-form"
+import { DatePickerField } from "@/components/form/fields/date-picker-field"
+import { SubmitButton } from "@/components/form/fields/submit-button"
+
+const schema = z.object({
+  dob: z.date({ message: "A date of birth is required." }),
+  startDate: z.date({ message: "Start date is required." }).optional(),
+})
+
+type FormValues = z.infer<typeof schema>
+
+const initialValues: FormValues = {
+  dob: new Date(),
+  startDate: undefined,
+}
+
+export default function Example() {
+  return (
+    <ShaddyForm
+      mode="onChange"
+      schema={schema}
+      initialValues={initialValues}
+      onSubmit={(data) => console.log(data)}
+    >
+      <div className="space-y-4 w-72">
+        <DatePickerField<FormValues>
+          name="dob"
+          label="Date of Birth"
+          required
+        />
+        <DatePickerField<FormValues>
+          name="startDate"
+          label="Start Date"
+          description="When would you like to begin?"
+        />
+        <SubmitButton label="Submit" />
+      </div>
+    </ShaddyForm>
+  )
+}
+```
+
+## Props
+
+<ParamField path="name" type="Path<T>" required>
+  The field name. Must match a key in your Zod schema passed to `ShaddyForm`. The bound value is a JavaScript `Date` object.
+</ParamField>
+
+<ParamField path="label" type="string">
+  Label text rendered above the date picker trigger. Omit to hide the label.
+</ParamField>
+
+<ParamField path="required" type="boolean" default="false">
+  When `true`, appends a red asterisk to the label as a visual indicator.
+</ParamField>
+
+<ParamField path="disabled" type="boolean" default="false">
+  Disables the trigger button (and thus the calendar popover) when `true`.
+</ParamField>
+
+<ParamField path="description" type="string">
+  Optional helper text rendered below the calendar trigger via `<FormDescription>`. Useful for date format hints or contextual guidance.
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes applied to the outermost `FormItem` wrapper.
+</ParamField>
+
+## Notes
+
+- `DatePickerField` must be rendered inside a `<ShaddyForm>` — it reads `control` from `useFormContext` internally.
+- The bound value is a native JavaScript `Date` object. Use `z.date()` in your Zod schema.
+- The calendar uses `captionLayout="dropdown"` which renders year and month dropdowns for faster navigation.
+- The selected date is formatted with `date-fns` `format(date, 'PPP')`. This respects the locale set by your `date-fns` configuration.
+- Validation errors are rendered below the description (if present) via shadcn/ui's `<FormMessage>`.

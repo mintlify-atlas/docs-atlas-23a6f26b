@@ -1,0 +1,192 @@
+---
+title: "ResetButton: Reset Form to Initial Values"
+sidebarTitle: "Reset Button"
+description: "ResetButton resets a ShaddyForm back to its initialValues using react-hook-form's reset method, clearing all field values and validation errors."
+---
+
+`ResetButton` provides a one-click way for users to clear a form and return to its starting state. It reads the form instance from `useFormContext`, calls `form.reset()` when clicked, and renders as an outlined `shadcn/ui` `Button`. Because it reads the context internally, no extra wiring is required — just drop it inside a `ShaddyForm`.
+
+## Installation
+
+<Steps>
+  <Step title="Install via CLI">
+    ```bash
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/reset-button
+    ```
+  </Step>
+  <Step title="Or install manually">
+    First ensure `ShaddyForm` is installed:
+
+    ```bash
+    npx shadcn@latest add https://shaddy-docs.vercel.app/r/shaddy-form
+    ```
+
+    Then copy the `ResetButton` component source into your project and update import paths.
+  </Step>
+</Steps>
+
+## Props
+
+<ParamField path="label" type="string" default='"Reset"'>
+  The text displayed on the button.
+</ParamField>
+
+<ParamField path="disabled" type="boolean" default="false">
+  When `true`, the button is rendered in a disabled state and clicking it has no effect.
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes applied to the button element, merged with the component's defaults via `cn`.
+</ParamField>
+
+<ParamField path="onClick" type="(e: React.MouseEvent<HTMLButtonElement>) => void">
+  An optional click handler called **after** the form has been reset. Use this for any side effects you want to trigger alongside the reset (e.g., closing a dialog, logging an event).
+</ParamField>
+
+<ParamField path="...props" type="ComponentProps<typeof Button>">
+  All other props from the `shadcn/ui` `Button` component are forwarded, including `variant`, `size`, and HTML button attributes. Note that `variant` defaults to `"outline"` and `size` defaults to `"sm"` in the component.
+</ParamField>
+
+## How Reset Works
+
+`ResetButton` calls `form.reset()` from `react-hook-form`. By default, `reset()` restores all field values to the `initialValues` provided to `ShaddyForm` and clears all validation errors and touched/dirty state. This is equivalent to the user never having interacted with the form.
+
+```tsx
+// Internally, ResetButton does this:
+const form = useFormContext();
+
+const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  form.reset();      // restore initialValues, clear errors
+  onClick?.(e);      // call any additional handler
+};
+```
+
+## Basic Usage
+
+```tsx
+import z from "zod";
+import { ShaddyForm } from "@/components/form/shaddy-form";
+import { TextField } from "@/components/form/fields/text-field";
+import { SubmitButton } from "@/components/form/fields/submit-button";
+import { ResetButton } from "@/components/form/fields/reset-button";
+
+const profileSchema = z.object({
+  name: z.string().min(1, { message: "Name is required" }),
+  email: z.string().email({ message: "Invalid email address" }),
+});
+
+type ProfileForm = z.infer<typeof profileSchema>;
+
+const initialValues: ProfileForm = {
+  name: "",
+  email: "",
+};
+
+export function ProfileForm() {
+  return (
+    <ShaddyForm<ProfileForm>
+      schema={profileSchema}
+      initialValues={initialValues}
+      onSubmit={(data) => console.log("Saved:", data)}
+    >
+      <div className="space-y-4 w-80">
+        <TextField<ProfileForm>
+          name="name"
+          label="Full Name"
+          placeholder="Enter your name"
+        />
+        <TextField<ProfileForm>
+          name="email"
+          label="Email Address"
+          required
+          placeholder="you@example.com"
+        />
+        <div className="flex gap-2">
+          <ResetButton label="Clear" />
+          <SubmitButton label="Save Profile" />
+        </div>
+      </div>
+    </ShaddyForm>
+  );
+}
+```
+
+## With a Post-Reset Callback
+
+Use the `onClick` prop to run additional logic after the form resets — such as dismissing a dialog or resetting local component state.
+
+```tsx
+import { useState } from "react";
+
+export function EditDialog({ onClose }: { onClose: () => void }) {
+  const [isDirty, setIsDirty] = useState(false);
+
+  return (
+    <ShaddyForm
+      schema={schema}
+      initialValues={initialValues}
+      onSubmit={handleSave}
+    >
+      <TextField name="title" label="Title" />
+      <div className="flex gap-2 mt-4">
+        <ResetButton
+          label="Discard Changes"
+          onClick={() => {
+            setIsDirty(false);
+            onClose();
+          }}
+        />
+        <SubmitButton label="Save" />
+      </div>
+    </ShaddyForm>
+  );
+}
+```
+
+<Note>
+  `ResetButton` resets to the `initialValues` passed to `ShaddyForm`, not necessarily to empty strings. If you pre-populate a form for editing (e.g., loading user data from an API), resetting will restore those pre-populated values — not a blank form.
+</Note>
+
+## Component Source (TypeScript)
+
+```tsx
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { useFormContext } from "react-hook-form";
+import { ComponentProps } from "react";
+
+type Props = ComponentProps<typeof Button> & {
+  label?: string;
+};
+
+export const ResetButton = ({
+  label = "Reset",
+  disabled = false,
+  className,
+  onClick,
+  ...props
+}: Props) => {
+  const form = useFormContext();
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    form.reset();
+    onClick?.(e);
+  };
+
+  return (
+    <Button
+      type="reset"
+      variant="outline"
+      size="sm"
+      disabled={disabled}
+      className={cn(className)}
+      onClick={handleClick}
+      {...props}
+    >
+      {label}
+    </Button>
+  );
+};
+
+ResetButton.displayName = "ResetButton";
+```

@@ -1,0 +1,64 @@
+---
+title: "UI Components: Extending shadcn/ui"
+sidebarTitle: "Overview"
+description: "Shaddy UI components extend shadcn/ui with specialized, production-ready components like DateRangePicker, PhoneInput, Dropzone, and Stepper."
+---
+
+Shaddy's UI component library builds directly on top of [shadcn/ui](https://ui.shadcn.com/) rather than re-implementing buttons, inputs, or modals from scratch. Instead, every component in this section extends the shadcn/ui foundation with specialized, production-ready functionality that addresses real-world use cases — date range selection, international phone entry, drag-and-drop file uploads, and guided multi-step workflows. The result is a cohesive set of components that inherit shadcn/ui's design language while adding meaningful new capabilities.
+
+## Components
+
+<CardGroup cols={2}>
+  <Card
+    title="DateRangePicker"
+    icon="calendar-range"
+    href="/ui/date-range-picker"
+  >
+    A popover calendar with built-in preset ranges (Today, Last 7 Days, This Month, etc.) for selecting start and end dates.
+  </Card>
+  <Card
+    title="PhoneInput"
+    icon="phone"
+    href="/ui/phone-input"
+  >
+    An international phone number field with a searchable country flag selector, built on react-phone-number-input.
+  </Card>
+  <Card
+    title="Dropzone"
+    icon="upload"
+    href="/ui/dropzone"
+  >
+    A compound file-upload component with drag-and-drop support, upload progress, retry logic, and per-file error messages.
+  </Card>
+  <Card
+    title="Stepper"
+    icon="list-ordered"
+    href="/ui/stepper"
+  >
+    A compound multi-step navigation component with step indicators, async per-step validation, and error state display.
+  </Card>
+</CardGroup>
+
+## Installation pattern
+
+Every Shaddy UI component is installed through the shadcn CLI. Run the command for the component you need and the source file will be copied directly into your project under `components/ui/`:
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/<component-name>
+```
+
+For example, to add the DateRangePicker:
+
+```bash
+npx shadcn@latest add https://shaddy-docs.vercel.app/r/date-range-picker
+```
+
+<Note>
+  Because the component source is copied into your codebase, you have full ownership over the code. Customize styles, add props, or swap out sub-components freely without touching a package dependency.
+</Note>
+
+## Design philosophy
+
+- **Extend, don't replace.** Each component consumes shadcn/ui primitives (`Button`, `Popover`, `Calendar`, `Input`, `Command`, etc.) so your theme tokens and design system apply automatically.
+- **Zero lock-in.** Installed components live in your repo. There is no runtime library to update or version-pin.
+- **Typed APIs.** All props are defined with TypeScript interfaces so you get full IntelliSense and type-safety out of the box.
