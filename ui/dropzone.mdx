@@ -1,5 +1,5 @@
 ---
-title: "Dropzone: File Upload with Drag and Drop"
+title: "Dropzone: Drag-and-Drop File Upload Component for React"
 sidebarTitle: "Dropzone"
 description: "A file upload dropzone component built on react-dropzone and shadcn/ui, supporting drag-and-drop and click-to-browse file selection."
 ---
@@ -203,7 +203,7 @@ Wraps a single `FileStatus` entry and provides per-file context to `DropzoneFile
 
 ### `<DropzoneFileMessage>`
 
-Shows the upload error message for the enclosing file item. When the file status is not `"error"` it renders its children instead, allowing a custom success message.
+Shows the upload error message for the enclosing file item when its status is `"error"`. When the file status is not `"error"`, renders its `children` instead — use this for a custom success or pending message.
 
 ### `<DropzoneRemoveFile>`
 
@@ -215,11 +215,13 @@ A `Button` that calls `onRetry` for the enclosing file item. Automatically disab
 
 ### `<InfiniteProgress>`
 
-An animated progress bar that displays an indeterminate pulse while a file is `"pending"`, fills solid green on `"success"`, and turns destructive red on `"error"`.
+An animated progress bar that displays an indeterminate pulse while a file is `"pending"`, fills solid on `"success"`, and turns destructive red on `"error"`. Requires a `status` prop:
 
 ```tsx
 <InfiniteProgress status={file.status} />
 ```
+
+`status` must be one of `"pending" | "success" | "error"`.
 
 ## `FileStatus` type
 

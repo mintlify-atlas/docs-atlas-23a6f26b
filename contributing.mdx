@@ -1,5 +1,5 @@
 ---
-title: "Contributing to Shaddy"
+title: "How to Contribute to Shaddy: Setup, Commits, and PRs"
 sidebarTitle: "Contributing"
 description: "Learn how to contribute to Shaddy — from forking and setting up the monorepo, to following commit conventions and submitting pull requests."
 ---
@@ -45,14 +45,14 @@ npm install -g pnpm
     Never commit directly to `main`. Create a dedicated branch named after your feature or fix:
 
     ```bash
-    git checkout -b feat/my-new-component
+    git checkout -b my-feature-branch
     ```
 
     Use the same type prefix in your branch name as in your commit messages (e.g. `feat/`, `fix/`, `docs/`).
   </Step>
 
   <Step title="Start the development server">
-    Run the Turbo-powered dev server from the repo root. This starts the Next.js docs site and the registry build watcher in parallel:
+    Run the dev server from the repo root. This starts the Next.js docs site and the registry build watcher in parallel:
 
     ```bash
     pnpm dev
@@ -72,13 +72,12 @@ shaddy/
 │   ├── web/                  # Next.js docs site + registry server
 │   │   └── src/
 │   │       ├── components/   # Shared UI and MDX components
-│   │       ├── registry/     # Registry definitions and built source files
-│   │       │   ├── default/  # Actual hook, form, and UI source code
-│   │       │   ├── registry-hook.ts
-│   │       │   ├── registry-ui.ts
-│   │       │   ├── registry-form.ts
-│   │       │   └── registry-utils.ts
-│   │       └── config/       # Site configuration
+│   │       └── registry/     # Registry definitions and built source files
+│   │           ├── default/  # Actual hook, form, and UI source code
+│   │           ├── registry-hook.ts
+│   │           ├── registry-ui.ts
+│   │           ├── registry-form.ts
+│   │           └── registry-utils.ts
 │   └── content/              # MDX documentation content files
 └── packages/
     ├── eslint-config/         # Shared ESLint rules
@@ -134,8 +133,6 @@ The short description should be written in the imperative mood, lowercase, and w
 feat(form): add password strength indicator
 fix(ui): correct button alignment on mobile
 docs: update contributing guidelines
-refactor(hooks): simplify useDebounce implementation
-chore: upgrade turbo to v2.4.2
 ```
 
 <Accordion title="All supported commit types">
@@ -160,7 +157,7 @@ chore: upgrade turbo to v2.4.2
 <Steps>
   <Step title="Push your branch to your fork">
     ```bash
-    git push origin feat/my-new-component
+    git push origin my-feature-branch
     ```
   </Step>
 
@@ -181,7 +178,6 @@ chore: upgrade turbo to v2.4.2
 
 - Browse the [README](https://github.com/rijvi-mahmud/shaddy#readme) for a high-level project overview.
 - Open a [GitHub Issue](https://github.com/rijvi-mahmud/shaddy/issues) with questions, bug reports, or feature suggestions.
-- Start a [GitHub Discussion](https://github.com/rijvi-mahmud/shaddy/discussions) for broader conversations about direction or design.
 
 <Note>
   Shaddy follows the [Contributor Covenant Code of Conduct v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/). All contributors are expected to be respectful and considerate in every interaction. Instances of abusive, harassing, or otherwise unacceptable behavior may be reported directly to the project maintainers.

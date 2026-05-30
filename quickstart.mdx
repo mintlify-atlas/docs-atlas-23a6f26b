@@ -1,7 +1,7 @@
 ---
-title: "Get Started with Shaddy"
+title: "Shaddy Quickstart: Add Components and Hooks in Minutes"
 sidebarTitle: "Quickstart"
-description: "Learn how to add Shaddy components, hooks, and the form system to your Next.js + shadcn/ui project in a few steps."
+description: "Install Shaddy UI components, typed hooks, and the ShaddyForm system into your Next.js + shadcn/ui project using the shadcn CLI and a public registry."
 ---
 
 This quickstart guide walks you through adding Shaddy resources — UI components, typed hooks, and the form system — to an existing Next.js project. By the end you will have a working form backed by Zod validation, installed entirely without adding a new package dependency.
@@ -57,8 +57,8 @@ You add resources using the same `npx shadcn@latest add <url>` CLI you already u
     ```
     components/form/shaddy-form.tsx
     components/form/form-context.ts
-    components/form/text-field.tsx
-    components/form/submit-button.tsx
+    components/form/fields/text-field.tsx
+    components/form/fields/submit-button.tsx
     ```
   </Step>
 
@@ -108,8 +108,8 @@ You add resources using the same `npx shadcn@latest add <url>` CLI you already u
     ```tsx
     import { z } from "zod"
     import { ShaddyForm } from "@/components/form/shaddy-form"
-    import { TextField } from "@/components/form/text-field"
-    import { SubmitButton } from "@/components/form/submit-button"
+    import { TextField } from "@/components/form/fields/text-field"
+    import { SubmitButton } from "@/components/form/fields/submit-button"
 
     // 1. Define your schema with Zod
     const loginSchema = z.object({
@@ -146,10 +146,10 @@ You add resources using the same `npx shadcn@latest add <url>` CLI you already u
           <TextField
             name="password"
             label="Password"
-            type="password"
+            type="text"
             placeholder="••••••••"
           />
-          <SubmitButton>Sign in</SubmitButton>
+          <SubmitButton label="Sign in" />
         </ShaddyForm>
       )
     }

@@ -1,7 +1,7 @@
 ---
-title: "useSessionStorage: sessionStorage Hook for React"
+title: "useSessionStorage: Persistent sessionStorage Hook for React"
 sidebarTitle: "useSessionStorage"
-description: "Persist typed state in sessionStorage with automatic JSON serialization, a useState-compatible API, configurable error handling, and automatic cleanup on tab close."
+description: "Persist typed state in sessionStorage with JSON serialization, a useState-compatible API, configurable error handling, and data scoped to the current tab."
 ---
 
 `useSessionStorage` is a React hook that provides a `useState`-style interface for persisting values in the browser's `sessionStorage`. It has an identical API to `useLocalStorage` — JSON serialization, a setter that accepts values or updater functions, and a remover — with the key difference that session storage is scoped to the current browser tab and is automatically cleared when the tab is closed. It is ideal for temporary UI state that should survive page refreshes within a session but must not bleed into other tabs or persist permanently.
@@ -172,6 +172,6 @@ export function TabbedDashboard() {
 ## Notes
 
 - `sessionStorage` is per-tab and per-origin. Data written in one tab is not accessible in another tab, and it is cleared automatically when the tab is closed.
-- Unlike `useLocalStorage`, this hook does not listen to `storage` events. `storage` events are not fired for sessionStorage changes in other tabs (since tabs cannot share session storage), so no cross-tab sync is needed.
+- The hook attaches a `storage` event listener (via `useEventListener`) to keep the in-memory state consistent if the stored value is modified externally. Note that browsers do not fire `storage` events for sessionStorage across different tabs, so no cross-tab sync occurs in practice.
 - The hook is safe to use in SSR environments — when `window.sessionStorage` is unavailable it falls back to `initialValue` and calls `onError` rather than throwing.
 - If you need data to persist beyond a single session (across tab closes and browser restarts), use [`useLocalStorage`](/hooks/use-local-storage) instead.

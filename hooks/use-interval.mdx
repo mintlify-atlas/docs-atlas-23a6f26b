@@ -1,7 +1,7 @@
 ---
-title: "useInterval: Interval Hook for React"
+title: "useInterval: Recurring Interval Control Hook for React"
 sidebarTitle: "useInterval"
-description: "Run a callback on a recurring interval in React with start, stop, reset, and isRunning controls — pause by passing null and clean up automatically on unmount."
+description: "Run a callback on a recurring interval in React with start, stop, reset, and isRunning controls. Pause by passing null; cleans up automatically on unmount."
 ---
 
 `useInterval` is a React hook that sets up a recurring interval and executes a callback at the given delay, while also exposing `start`, `stop`, `reset`, and `isRunning` controls so you can manage the interval lifecycle imperatively. Passing `null` as the delay pauses the interval without unmounting the component, and the hook automatically clears the interval when the component unmounts — no manual `clearInterval` needed. It is ideal for countdowns, polling, animations, and any feature that needs repeating behaviour with runtime control.

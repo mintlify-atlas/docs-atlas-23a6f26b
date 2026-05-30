@@ -1,7 +1,7 @@
 ---
-title: "useClipboardCopy: Clipboard Copy Hook for React"
+title: "useClipboardCopy: Async Clipboard Copy Hook for React"
 sidebarTitle: "useClipboardCopy"
-description: "Copy text to the clipboard in React with a single async call and track the result through a typed status — idle, success, or error — with no external dependencies."
+description: "Copy text to the clipboard in React and track the result through a typed status — idle, success, or error. Status auto-resets after two seconds."
 ---
 
 `useClipboardCopy` is a React hook that wraps the browser's `navigator.clipboard.writeText` API and exposes a clean, typed interface for copying text to the clipboard. It tracks what was last copied and the current copy status (`idle`, `success`, or `error`), so you can easily update your UI — for example, swapping a "Copy" label for a "Copied!" confirmation — without managing that state yourself. The status automatically resets to `idle` after two seconds.

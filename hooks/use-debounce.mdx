@@ -1,7 +1,7 @@
 ---
-title: "useDebounce: Debounced Value Hook for React"
+title: "useDebounce: Debounced Reactive Value Hook for React"
 sidebarTitle: "useDebounce"
-description: "Delay updating a reactive value in React until a quiet period has elapsed — ideal for search inputs, filters, and any rapidly-changing state that drives expensive operations."
+description: "Delay a value update in React until input stops — great for search inputs, filters, and expensive computations on rapidly-changing state."
 ---
 
 `useDebounce` is a React hook that delays propagating a value to the rest of your component until the value has stopped changing for a specified number of milliseconds. This is the classic debouncing pattern: instead of reacting to every keystroke or slider movement, you wait for the user to pause before acting. It is the simplest way to avoid hammering an API on every character typed in a search box, or to keep expensive derived computations from running on every render.

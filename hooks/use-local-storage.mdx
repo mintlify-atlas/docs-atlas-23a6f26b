@@ -1,7 +1,7 @@
 ---
-title: "useLocalStorage: localStorage Hook for React"
+title: "useLocalStorage: Persistent localStorage State for React"
 sidebarTitle: "useLocalStorage"
-description: "Persist typed state in localStorage with automatic JSON serialization, a useState-compatible API, cross-tab synchronization, and configurable error handling."
+description: "Persist typed state in localStorage with JSON serialization, a useState-compatible API, automatic cross-tab sync via storage events, and error handling."
 ---
 
 `useLocalStorage` is a React hook that provides a `useState`-style interface for persisting values in the browser's `localStorage`. It handles JSON serialization and deserialization automatically, keeps state in sync across multiple tabs via the `storage` event, and exposes a third tuple element to remove the stored value and reset to the initial state. It accepts custom serializers for complex types like `Date` objects, an `onError` callback for graceful failure handling, and an `initializeWithValue` flag to control server-side rendering behaviour.

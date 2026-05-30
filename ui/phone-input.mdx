@@ -1,7 +1,7 @@
 ---
-title: "PhoneInput: International Phone Number Input"
+title: "PhoneInput: International Phone Number Input for React"
 sidebarTitle: "PhoneInput"
-description: "An international phone number input component with country flag selector, built on react-phone-number-input and shadcn/ui."
+description: "An international phone number input with searchable country flag selector and auto-formatting, built on libphonenumber-js and shadcn/ui."
 ---
 
 `PhoneInput` provides a polished, internationally-aware phone number field for React applications. It combines a searchable country dropdown — complete with circular flag icons — with a standard text input that automatically formats and validates numbers as the user types. Country detection is bi-directional: selecting a country from the dropdown prefixes the calling code into the input, and typing a valid international number into the input automatically updates the selected country flag. The country selector can be hidden entirely for simpler form designs.
@@ -101,6 +101,10 @@ Set `withCountryCodeSelector={false}` to render a plain phone input with a globe
 
 <ParamField body="placeholder" type="string" default='"Enter your phone number"'>
   Placeholder text displayed inside the phone number input when it is empty.
+</ParamField>
+
+<ParamField body="inline" type="boolean" default="false">
+  When `true`, adjusts the input styling to render inline — removing the left rounded corners so the input joins seamlessly with an adjacent element such as a form grid column.
 </ParamField>
 
 <ParamField body="disabled" type="boolean" default="false">

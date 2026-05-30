@@ -1,7 +1,7 @@
 ---
-title: "useDefault: State with Fallback Value for React"
+title: "useDefault: State with Automatic Fallback for React"
 sidebarTitle: "useDefault"
-description: "Manage stateful values in React with an automatic fallback — whenever the value is set to null or undefined, the hook transparently substitutes a default."
+description: "Manage stateful values in React with an automatic fallback — when set to null or undefined the hook transparently substitutes a configured default value."
 ---
 
 `useDefault` is a React hook that manages a stateful value and automatically substitutes a default fallback whenever the state would otherwise become `null` or `undefined`. This removes the need to sprinkle `value ?? defaultValue` throughout your JSX — the hook guarantees the returned value is always of type `T`, never nullable. It is ideal for form fields, configuration panels, and any scenario where a sensible default should silently replace a missing value.

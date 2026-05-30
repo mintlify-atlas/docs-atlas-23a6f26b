@@ -1,7 +1,7 @@
 ---
 title: "useEventListener: Type-Safe Event Listener Hook for React"
 sidebarTitle: "useEventListener"
-description: "Attach and automatically clean up type-safe event listeners on any DOM element in React, with support for event delegation, capture options, and full TypeScript inference."
+description: "Attach type-safe event listeners to any DOM element in React with automatic cleanup, CSS-selector delegation, and precise TypeScript event-type inference."
 ---
 
 `useEventListener` is a React hook that attaches an event listener to a DOM element — `window`, `document`, any `HTMLElement`, or any `SVGElement` — and automatically removes it when the component unmounts or when the event name, element, or options change. It is fully generic: TypeScript infers the correct event type from the element and event name combination, so your handler receives a properly typed event object with no manual casting. It also supports event delegation via a `selector` option, letting a single listener handle events from many child elements efficiently.

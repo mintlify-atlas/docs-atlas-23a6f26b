@@ -1,7 +1,7 @@
 ---
-title: "Hooks Pattern: Extracting Logic into Custom Hooks"
+title: "Hooks Pattern: Extract Reusable Logic with Custom Hooks"
 sidebarTitle: "Hooks Pattern"
-description: "The Hooks pattern extracts stateful logic and side effects from components into custom React hooks for better reuse, testability, and separation of concerns."
+description: "The Hooks pattern extracts stateful logic from components into custom React hooks for better reuse, testability, and separation of concerns."
 ---
 
 Before React 16.8, sharing stateful logic between components required Higher-Order Components or Render Props — both of which add wrapper components to the tree and obscure what is actually happening. Custom hooks solve this more directly: extract the logic into a plain function, call it from any component, and get the same behaviour without any extra nesting.

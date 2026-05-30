@@ -26,7 +26,7 @@ import { SubmitButton } from "@/components/form/fields/submit-button"
 const schema = z.object({
   bookingRange: z.object({
     from: z.date({ message: "Start date is required." }),
-    to: z.date({ message: "End date is required." }),
+    to: z.date({ message: "End date is required." }).optional(),
   }),
 })
 
@@ -35,7 +35,7 @@ type FormValues = z.infer<typeof schema>
 const initialValues: FormValues = {
   bookingRange: {
     from: new Date(),
-    to: new Date(),
+    to: undefined,
   },
 }
 
@@ -74,7 +74,7 @@ export default function Example() {
 </ParamField>
 
 <ParamField path="disabled" type="boolean" default="false">
-  Passes the disabled state through to the underlying `DateRangePicker` component.
+  Declared in the field's type interface. Note: this prop is not currently wired through to the underlying `DateRangePicker` component and has no effect at runtime.
 </ParamField>
 
 <ParamField path="className" type="string">
@@ -84,6 +84,6 @@ export default function Example() {
 ## Notes
 
 - `DateRangePickerField` must be rendered inside a `<ShaddyForm>` — it reads `control` from `useFormContext` internally.
-- The bound value is a date range object. Structure your Zod schema with `z.object({ from: z.date(), to: z.date() })` or similar, and provide matching initial values.
+- The bound value is a date range object. Structure your Zod schema with `z.object({ from: z.date(), to: z.date().optional() })` — `to` is optional because a user may have selected only a start date. Provide matching initial values.
 - For picking a single date, use [`DatePickerField`](/form/date-picker-field) instead.
 - Validation errors are rendered below the date range picker via shadcn/ui's `<FormMessage>`.

@@ -1,5 +1,5 @@
 ---
-title: "FieldArray: Dynamic List Fields in ShaddyForm"
+title: "FieldArray: Dynamic Repeating Fields in ShaddyForm"
 sidebarTitle: "FieldArray"
 description: "FieldArray lets you render a dynamic list of form fields backed by react-hook-form's useFieldArray, with built-in add and remove controls."
 ---
@@ -152,16 +152,25 @@ export function ContactListForm() {
 
 `FieldArray` can be nested to support multi-level dynamic structures. Ensure that each `name` prop reflects the correct dot-notation path to the nested array within the schema.
 
+Because TypeScript's `ArrayPath<T>` and `Path<T>` do not accept template literal strings, you must cast dynamic index paths using `as` when building nested field names at runtime.
+
 ```tsx
+import type { ArrayPath, Path } from "react-hook-form";
+
 <FieldArray<FormValues> name="sections">
   {({ fields: sections, append: appendSection }) =>
     sections.map((section, sectionIndex) => (
-      <FieldArray<FormValues> key={section.id} name={`sections.${sectionIndex}.items`}>
+      <FieldArray<FormValues>
+        key={section.id}
+        name={`sections.${sectionIndex}.items` as ArrayPath<FormValues>}
+      >
         {({ fields: items, append: appendItem }) =>
           items.map((item, itemIndex) => (
             <TextField<FormValues>
               key={item.id}
-              name={`sections.${sectionIndex}.items.${itemIndex}.title`}
+              name={
+                `sections.${sectionIndex}.items.${itemIndex}.title` as Path<FormValues>
+              }
               label="Item Title"
             />
           ))

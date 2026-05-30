@@ -1,16 +1,16 @@
 ---
-title: "Form Context and useFormContext in ShaddyForm"
+title: "Form Context: ShaddyForm Hooks and Context Explained"
 sidebarTitle: "Form Context"
-description: "FormContext provides react-hook-form's form instance to all child field components in ShaddyForm, enabling type-safe field registration without prop drilling."
+description: "ShaddyForm exposes react-hook-form's form context to child fields, enabling type-safe registration and programmatic step validation without prop drilling."
 ---
 
-When `ShaddyForm` renders, it wraps its children with `react-hook-form`'s `Form` provider, making the form instance available throughout the component tree. Field components tap into this context to register themselves, display validation errors, and read current values — all without receiving any form props directly from their parent.
+When `ShaddyForm` renders, it wraps its children with `react-hook-form`'s `Form` provider (the `shadcn/ui` wrapper around `FormProvider`), making the full form instance available throughout the component tree. Field components tap into this context to register themselves, display validation errors, and read current values — all without receiving any form props directly from their parent.
 
 ## How FormContext Works
 
-`ShaddyForm` calls `useForm()` internally and wraps its children with `react-hook-form`'s `<Form>` context provider (the `shadcn/ui` wrapper around `FormProvider`). Any component inside `ShaddyForm` can call `useFormContext()` to access the full `UseFormReturn` object — including `control`, `register`, `getValues`, `setValue`, `formState`, and more.
+`ShaddyForm` calls `useForm()` internally and renders `<Form {...form}>`, which is the `shadcn/ui` `Form` component that wraps `react-hook-form`'s `FormProvider`. Any component inside `ShaddyForm` can therefore call `useFormContext()` to access the full `UseFormReturn` object — including `control`, `register`, `getValues`, `setValue`, `formState`, and more.
 
-Shaddy also exports a typed `useShaddyFormContext` hook that reads a narrower context shape (`{ control }`) with a helpful error if called outside of a form:
+The `form-context.ts` file also exports a narrower typed context and hook for scenarios where you want to build utilities that only depend on the `control` object:
 
 ```ts
 export type ShaddyFormContext<TFormValues extends FieldValues = any> = {
@@ -27,7 +27,7 @@ export const useShaddyFormContext = <TFormValues extends FieldValues = any>() =>
 ```
 
 <Note>
-  In practice, most built-in field components use `react-hook-form`'s own `useFormContext()` directly, which provides the complete `UseFormReturn` API rather than just `control`. Use `useShaddyFormContext` when you only need the `control` object and want the built-in safety check.
+  `useShaddyFormContext` reads from a separate `ShaddyFormContext` that is not automatically provided by `ShaddyForm`. To use it, you must render `ShaddyFormContext.Provider` yourself. For most use cases — including all built-in field components — use `react-hook-form`'s `useFormContext()` instead, which works out of the box inside any `ShaddyForm`.
 </Note>
 
 ## `useFormContext()` for Custom Fields
